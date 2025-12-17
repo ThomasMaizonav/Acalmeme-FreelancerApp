@@ -147,7 +147,9 @@ const Auth = () => {
           navigate("/dashboard");
         }
       } else {
-        const redirectUrl = `${window.location.origin}/`;
+        const redirectUrl =
+          import.meta.env.VITE_SUPABASE_OAUTH_REDIRECT_URL ||
+          `${window.location.origin}/auth`;
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -196,7 +198,11 @@ const Auth = () => {
     }
 
     try {
-      const redirectTo = `${window.location.origin}/auth?type=recovery`;
+      const envResetRedirect = import.meta.env.VITE_SUPABASE_PASSWORD_RESET_REDIRECT_URL;
+      const defaultResetRedirect = `${window.location.origin}/auth?type=recovery`;
+      const redirectTo =
+        envResetRedirect ||
+        defaultResetRedirect;
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo,
       });
