@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base colors - calming palette */
+    --background: 210 40% 98%;
+    --foreground: 220 20% 25%;
+
+    /* Card and surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 25%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 25%;
+
+    /* Primary - soft blue (calming) */
+    --primary: 205 70% 65%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 205 70% 55%;
+
+    /* Secondary - gentle lilac */
+    --secondary: 270 40% 75%;
+    --secondary-foreground: 270 40% 20%;
+    --secondary-hover: 270 40% 65%;
+
+    /* Accent - soothing mint */
+    --accent: 160 50% 70%;
+    --accent-foreground: 160 50% 20%;
+    --accent-hover: 160 50% 60%;
+
+    /* Calm - warm beige */
+    --calm: 30 20% 85%;
+    --calm-foreground: 30 20% 30%;
+
+    /* Muted tones */
+    --muted: 210 20% 94%;
+    --muted-foreground: 220 15% 50%;
+
+    /* Destructive (soft red for errors) */
+    --destructive: 0 60% 65%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs */
+    --border: 220 15% 88%;
+    --input: 220 15% 92%;
+    --ring: 205 70% 65%;
+
+    /* Gradients */
+    --gradient-calm: linear-gradient(135deg, hsl(205 70% 75%), hsl(270 40% 80%));
+    --gradient-hero: linear-gradient(135deg, hsl(205 70% 65%), hsl(160 50% 70%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 30% 98%));
+
+    /* Shadows */
+    --shadow-soft: 0 2px 20px -5px hsl(220 20% 70% / 0.15);
+    --shadow-calm: 0 4px 30px -8px hsl(205 70% 65% / 0.2);
+
+    /* Radius */
+    --radius: 1rem;
+
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 220 25% 12%;
+    --foreground: 210 30% 95%;
+
+    --card: 220 25% 15%;
+    --card-foreground: 210 30% 95%;
+
+    --popover: 220 25% 15%;
+    --popover-foreground: 210 30% 95%;
+
+    --primary: 205 70% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 205 70% 50%;
+
+    --secondary: 270 40% 65%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-hover: 270 40% 55%;
+
+    --accent: 160 50% 60%;
+    --accent-foreground: 0 0% 100%;
+    --accent-hover: 160 50% 50%;
+
+    --calm: 30 20% 30%;
+    --calm-foreground: 30 20% 90%;
+
+    --muted: 220 20% 20%;
+    --muted-foreground: 220 15% 65%;
+
+    --destructive: 0 60% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 25%;
+    --input: 220 20% 22%;
+    --ring: 205 70% 60%;
+
+    --gradient-calm: linear-gradient(135deg, hsl(205 70% 40%), hsl(270 40% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(205 70% 35%), hsl(160 50% 40%));
+    --gradient-card: linear-gradient(180deg, hsl(220 25% 15%), hsl(220 25% 18%));
+
+    --shadow-soft: 0 2px 20px -5px hsl(220 20% 5% / 0.4);
+    --shadow-calm: 0 4px 30px -8px hsl(205 70% 30% / 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-['Poppins',sans-serif] antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+  }
+}
+
+@layer components {
+  /* Breathing animation for SOS mode */
+  .breathe-circle {
+    @apply rounded-full;
+    transition: all 4s ease-in-out;
+  }
+
+  .breathe-in {
+    @apply scale-150 opacity-80;
+  }
+
+  .breathe-hold {
+    @apply scale-150 opacity-80;
+  }
+
+  .breathe-out {
+    @apply scale-100 opacity-60;
+  }
+
+  /* Floating animation for hero elements */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  /* Pulse animation for calm elements */
+  @keyframes calm-pulse {
+    0%, 100% {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  }
+
+  .animate-calm-pulse {
+    animation: calm-pulse 4s ease-in-out infinite;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/60 backdrop-blur-lg border border-white/20;
+  }
+
+  .glass-dark {
+    @apply bg-card/60 backdrop-blur-lg border border-border/20;
+  }
+}
