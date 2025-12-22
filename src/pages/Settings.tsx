@@ -155,7 +155,7 @@ const Settings = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate(-1)}
             className="rounded-full"
           >
             <ArrowLeft className="w-5 h-5" />

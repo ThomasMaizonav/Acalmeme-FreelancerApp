@@ -176,10 +176,10 @@ const Landing = () => {
             <Button
               size="sm"
               className="gap-1 text-xs sm:text-sm px-3 sm:px-4 bg-gradient-hero text-white hover:opacity-90"
-              onClick={() => navigate("/auth")}
+              onClick={() => navigate("/auth?mode=signup")}
             >
               <UserPlus className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span>Começar grátis</span>
+              <span>Criar conta</span>
             </Button>
           </div>
         </div>

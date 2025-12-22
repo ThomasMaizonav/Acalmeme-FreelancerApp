@@ -69,9 +69,9 @@ export const PremiumGuard = ({ children, feature = "este recurso" }: PremiumGuar
               variant="outline"
               size="lg"
               className="w-full"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(-1)}
             >
-              Voltar ao início
+              Voltar
             </Button>
           </div>
         </Card>

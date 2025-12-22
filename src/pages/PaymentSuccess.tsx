@@ -92,9 +92,9 @@ const PaymentSuccess = () => {
                 <Button
                   variant="outline"
                   size="lg"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => navigate(-1)}
                 >
-                  Voltar ao Dashboard
+                  Voltar
                 </Button>
               </div>
             </>

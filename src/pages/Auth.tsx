@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft, CreditCard } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -25,6 +25,7 @@ const logAuthEvent = async (userId: string, eventType: string) => {
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
   const [resetEmail, setResetEmail] = useState("");
@@ -46,6 +47,14 @@ const Auth = () => {
   });
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const mode = searchParams.get("mode");
+    if (mode === "signup") {
+      setIsLogin(false);
+    } else if (mode === "login") {
+      setIsLogin(true);
+    }
+
     const hashParams =
       typeof window !== "undefined" && window.location.hash
         ? new URLSearchParams(window.location.hash.substring(1))
@@ -71,7 +80,7 @@ const Auth = () => {
     return () => {
       data.subscription.unsubscribe();
     };
-  }, []);
+  }, [location.search]);
 
   const formatCPF = (value: string) => {
     const numbers = value.replace(/\D/g, "").slice(0, 11);

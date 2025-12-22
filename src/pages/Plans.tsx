@@ -138,9 +138,6 @@ const Plans = () => {
                 <span className="text-4xl font-bold">R$ 27,90</span>
                 <span className="text-muted-foreground">/mês</span>
               </div>
-              <p className="text-sm text-primary font-medium mt-2">
-                + 15 dias de teste grátis ao assinar
-              </p>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3 mb-6">

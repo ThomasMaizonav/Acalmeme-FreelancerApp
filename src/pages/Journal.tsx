@@ -47,7 +47,7 @@ const Journal = () => {
         <div className="max-w-4xl mx-auto">
           <Button
             variant="ghost"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate(-1)}
             className="mb-6"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

@@ -289,9 +289,9 @@ const Crisis = () => {
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Button 
                       variant="default" 
-                      onClick={() => navigate("/dashboard")}
+                      onClick={() => navigate(-1)}
                     >
-                      Voltar ao início
+                      Voltar
                     </Button>
                     <Button 
                       variant="outline" 
