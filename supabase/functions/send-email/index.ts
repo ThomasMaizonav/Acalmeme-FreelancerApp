@@ -1,84 +1,103 @@
 // supabase/functions/send-email/index.ts
-// Deno Edge Function (Supabase)
+// Edge Function (Deno) para enviar e-mails via Resend, protegida por CRON_SECRET.
 
-type SendEmailPayload = {
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "";
+
+type Payload = {
   to: string | string[];
   subject: string;
   html?: string;
   text?: string;
+  from?: string; // opcional (se não mandar, usa onboarding@resend.dev)
+  reply_to?: string;
 };
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
+function json(status: number, body: Record<string, unknown>) {
+  return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
   });
 }
 
-Deno.serve(async (req) => {
-  // 1) Proteção do cron por segredo (NÃO é JWT)
-  const expected = Deno.env.get("CRON_SECRET") ?? "";
-  const got = req.headers.get("x-cron-secret") ?? "";
-
-  if (!expected || got !== expected) {
-    return json({ error: "unauthorized" }, 401);
+Deno.serve(async (req: Request) => {
+  // Healthcheck simples
+  if (req.method === "GET") {
+    return json(200, { ok: true });
   }
 
-  // 2) Lê payload
-  let payload: SendEmailPayload;
+  // Só aceita POST
+  if (req.method !== "POST") {
+    return json(405, { error: "Method not allowed" });
+  }
+
+  // Segurança: valida CRON_SECRET via Authorization: Bearer <secret>
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length) : "";
+
+  if (!CRON_SECRET || token !== CRON_SECRET) {
+    return json(401, { error: "unauthorized" });
+  }
+
+  if (!RESEND_API_KEY) {
+    return json(500, { error: "Missing RESEND_API_KEY secret" });
+  }
+
+  let payload: Payload;
   try {
-    payload = await req.json();
+    payload = (await req.json()) as Payload;
   } catch {
-    return json({ error: "Invalid JSON body" }, 400);
+    return json(400, { error: "Invalid JSON body" });
   }
 
   const to = payload.to;
-  const subject = payload.subject?.trim();
+  const subject = (payload.subject ?? "").trim();
   const html = payload.html;
   const text = payload.text;
 
   if (!to || !subject) {
-    return json({ error: "Missing 'to' or 'subject'" }, 400);
+    return json(400, { error: "Missing required fields: to, subject" });
+  }
+  if (!html && !text) {
+    return json(400, { error: "Provide at least one: html or text" });
   }
 
-  // 3) Envio via Resend
-  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-  const EMAIL_FROM = Deno.env.get("EMAIL_FROM");
+  // Importante:
+  // - Sem domínio verificado, use onboarding@resend.dev (funciona pra testes/transacional inicial)
+  // - Quando comprar domínio, troque por algo tipo: no-reply@acalmeme.com
+  const from = (payload.from ?? "onboarding@resend.dev").trim();
 
-  if (!RESEND_API_KEY || !EMAIL_FROM) {
-    return json(
-      { error: "Missing RESEND_API_KEY or EMAIL_FROM in Edge Function secrets" },
-      500
-    );
-  }
+  const resendBody: Record<string, unknown> = {
+    from,
+    to,
+    subject,
+    ...(html ? { html } : {}),
+    ...(text ? { text } : {}),
+    ...(payload.reply_to ? { reply_to: payload.reply_to } : {}),
+  };
 
-  const resendResp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: EMAIL_FROM,
-      to,
-      subject,
-      html: html ?? undefined,
-      text: text ?? undefined,
-    }),
-  });
-
-  const resendJson = await resendResp.json().catch(() => ({}));
-
-  if (!resendResp.ok) {
-    return json(
-      {
-        error: "Resend request failed",
-        status: resendResp.status,
-        details: resendJson,
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
       },
-      500
-    );
-  }
+      body: JSON.stringify(resendBody),
+    });
 
-  return json({ ok: true, resend: resendJson }, 200);
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      return json(502, {
+        error: "Resend error",
+        status: r.status,
+        details: data,
+      });
+    }
+
+    return json(200, { ok: true, data });
+  } catch (e) {
+    return json(500, { error: "Unexpected error", details: String(e) });
+  }
 });

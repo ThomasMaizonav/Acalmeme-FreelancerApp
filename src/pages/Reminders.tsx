@@ -28,6 +28,8 @@ interface Reminder {
   last_sent_at?: string | null;
 }
 
+const INDEX_TO_DAY = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+
 const DAYS_MAP = {
   mon: "Seg",
   tue: "Ter",
@@ -47,12 +49,13 @@ const Reminders = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const [userEmail, setUserEmail] = useState("");
+  const [scheduledTimeouts, setScheduledTimeouts] = useState<number[]>([]);
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     reminder_type: "custom",
-    scheduled_time: "08:00",
+    scheduled_times: ["08:00"],
     days_of_week: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
     send_email: false,
     email: "",
@@ -90,6 +93,7 @@ const Reminders = () => {
       setNotificationPermission(permission);
       
       if (permission === "granted") {
+        scheduleNotifications(reminders);
         toast({
           title: "Notificações ativadas",
           description: "Você receberá lembretes nos horários configurados.",
@@ -116,38 +120,66 @@ const Reminders = () => {
     }
   };
 
+  const clearScheduledNotifications = () => {
+    scheduledTimeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
+    setScheduledTimeouts([]);
+  };
+
+  const getNextReminderDate = (reminder: Reminder) => {
+    if (!reminder.days_of_week || reminder.days_of_week.length === 0) return null;
+
+    const [hours, minutes] = reminder.scheduled_time.split(":").map(Number);
+    const now = new Date();
+
+    for (let offset = 0; offset <= 7; offset += 1) {
+      const candidate = new Date(now);
+      candidate.setDate(now.getDate() + offset);
+      candidate.setHours(hours, minutes, 0, 0);
+
+      const dayKey = INDEX_TO_DAY[candidate.getDay()];
+      if (!reminder.days_of_week.includes(dayKey)) continue;
+      if (candidate <= now) continue;
+
+      return candidate;
+    }
+
+    return null;
+  };
+
+  const scheduleNextReminder = (reminder: Reminder) => {
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+    if (!reminder.is_active) return;
+
+    const nextDate = getNextReminderDate(reminder);
+    if (!nextDate) return;
+
+    const timeout = nextDate.getTime() - Date.now();
+    const timeoutId = window.setTimeout(() => {
+      if (reminder.sound_url && reminder.sound_url !== "default") {
+        const audio = new Audio(reminder.sound_url);
+        audio.play().catch(e => console.log("Erro ao reproduzir som:", e));
+      }
+
+      new Notification(reminder.title, {
+        body: reminder.description || "Hora do seu lembrete!",
+        icon: "/favicon.ico",
+        badge: "/favicon.ico",
+        requireInteraction: true,
+      });
+
+      scheduleNextReminder(reminder);
+    }, timeout);
+
+    setScheduledTimeouts(prev => [...prev, timeoutId]);
+  };
+
   const scheduleNotifications = (reminders: Reminder[]) => {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
 
-    reminders.forEach(reminder => {
-      if (!reminder.is_active) return;
-
-      const now = new Date();
-      const [hours, minutes] = reminder.scheduled_time.split(":");
-      const scheduledTime = new Date();
-      scheduledTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
-      if (scheduledTime <= now) {
-        scheduledTime.setDate(scheduledTime.getDate() + 1);
-      }
-
-      const timeout = scheduledTime.getTime() - now.getTime();
-
-      setTimeout(() => {
-        if (reminder.sound_url && reminder.sound_url !== "default") {
-          const audio = new Audio(reminder.sound_url);
-          audio.play().catch(e => console.log("Erro ao reproduzir som:", e));
-        }
-        
-        new Notification(reminder.title, {
-          body: reminder.description || "Hora do seu lembrete!",
-          icon: "/favicon.ico",
-          badge: "/favicon.ico",
-          requireInteraction: true,
-        });
-      }, timeout);
-    });
+    clearScheduledNotifications();
+    reminders.forEach(reminder => scheduleNextReminder(reminder));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -156,16 +188,40 @@ const Reminders = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from("reminders").insert([{
+    if (formData.days_of_week.length === 0) {
+      toast({
+        title: "Selecione ao menos um dia",
+        description: "Escolha os dias da semana para receber o lembrete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const uniqueTimes = Array.from(
+      new Set(formData.scheduled_times.map(time => time.trim()).filter(Boolean))
+    );
+
+    if (uniqueTimes.length === 0) {
+      toast({
+        title: "Defina pelo menos um horário",
+        description: "Adicione um horário para salvar o lembrete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload = uniqueTimes.map(time => ({
       user_id: user.id,
       title: formData.title,
       description: formData.description,
       reminder_type: formData.reminder_type as "medication" | "water" | "exercise" | "custom",
-      scheduled_time: formData.scheduled_time,
+      scheduled_time: time,
       days_of_week: formData.days_of_week,
       send_email: formData.send_email,
       email: formData.send_email ? (formData.email || user.email) : null,
-    }]);
+    }));
+
+    const { error } = await supabase.from("reminders").insert(payload);
 
     if (error) {
       toast({
@@ -185,7 +241,7 @@ const Reminders = () => {
         title: "",
         description: "",
         reminder_type: "custom",
-        scheduled_time: "08:00",
+        scheduled_times: ["08:00"],
         days_of_week: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
         send_email: false,
         email: userEmail,
@@ -237,6 +293,35 @@ const Reminders = () => {
       days_of_week: prev.days_of_week.includes(day)
         ? prev.days_of_week.filter(d => d !== day)
         : [...prev.days_of_week, day]
+    }));
+  };
+
+  const setDaysPreset = (days: string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      days_of_week: days,
+    }));
+  };
+
+  const updateTime = (index: number, value: string) => {
+    setFormData(prev => {
+      const nextTimes = [...prev.scheduled_times];
+      nextTimes[index] = value;
+      return { ...prev, scheduled_times: nextTimes };
+    });
+  };
+
+  const addTime = () => {
+    setFormData(prev => ({
+      ...prev,
+      scheduled_times: [...prev.scheduled_times, "08:00"],
+    }));
+  };
+
+  const removeTime = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      scheduled_times: prev.scheduled_times.filter((_, i) => i !== index),
     }));
   };
 
@@ -380,18 +465,65 @@ const Reminders = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="time">Horário</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={formData.scheduled_time}
-                      onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
-                      required
-                    />
+                    <Label>Horários</Label>
+                    <div className="space-y-2 mt-2">
+                      {formData.scheduled_times.map((time, index) => (
+                        <div key={`${time}-${index}`} className="flex items-center gap-2">
+                          <Input
+                            type="time"
+                            value={time}
+                            onChange={(e) => updateTime(index, e.target.value)}
+                            required
+                          />
+                          {formData.scheduled_times.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeTime(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      <Button type="button" variant="outline" size="sm" onClick={addTime}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Adicionar horário
+                      </Button>
+                    </div>
                   </div>
 
                   <div>
                     <Label>Dias da semana</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setDaysPreset(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])
+                        }
+                      >
+                        Todos
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDaysPreset(["mon", "tue", "wed", "thu", "fri"])}
+                      >
+                        Dias úteis
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDaysPreset(["sat", "sun"])}
+                      >
+                        Fim de semana
+                      </Button>
+                    </div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {Object.entries(DAYS_MAP).map(([key, label]) => (
                         <Button
@@ -405,6 +537,13 @@ const Reminders = () => {
                         </Button>
                       ))}
                     </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {formData.days_of_week.length > 0
+                        ? `Selecionados: ${formData.days_of_week
+                            .map(day => DAYS_MAP[day as keyof typeof DAYS_MAP])
+                            .join(", ")}`
+                        : "Nenhum dia selecionado."}
+                    </p>
                   </div>
 
                   <div className="space-y-2 border-t pt-4">
