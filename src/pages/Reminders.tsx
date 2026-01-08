@@ -12,33 +12,40 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Bell, Plus, Trash2, Edit, Mail, Pill, Droplets, Dumbbell } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EditReminderDialog } from "@/components/EditReminderDialog";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
+interface ReminderTime {
+  id: string;
+  scheduled_time: string;
+  is_active: boolean;
+}
 
 interface Reminder {
   id: string;
   title: string;
   description: string | null;
   reminder_type: "medication" | "water" | "exercise" | "custom";
-  scheduled_time: string;
-  days_of_week: string[];
+  days_of_week: number[];
   is_active: boolean;
-  sound_url: string | null;
   send_email: boolean;
   email: string | null;
+  send_push?: boolean | null;
+  timezone?: string | null;
   last_sent_at?: string | null;
+  reminder_times?: ReminderTime[];
 }
 
-const INDEX_TO_DAY = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+const DAYS = [
+  { value: 0, label: "Dom" },
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+  { value: 6, label: "Sáb" },
+];
 
-const DAYS_MAP = {
-  mon: "Seg",
-  tue: "Ter",
-  wed: "Qua",
-  thu: "Qui",
-  fri: "Sex",
-  sat: "Sáb",
-  sun: "Dom"
-};
+const BRAZIL_TIMEZONE = "America/Sao_Paulo";
+const BRAZIL_TIMEZONE_LABEL = "Horário de Brasília (America/Sao_Paulo)";
 
 const Reminders = () => {
   const navigate = useNavigate();
@@ -47,8 +54,8 @@ const Reminders = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deleteReminderTarget, setDeleteReminderTarget] = useState<Reminder | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
-  const [userEmail, setUserEmail] = useState("");
   const [scheduledTimeouts, setScheduledTimeouts] = useState<number[]>([]);
 
   const [formData, setFormData] = useState({
@@ -56,9 +63,8 @@ const Reminders = () => {
     description: "",
     reminder_type: "custom",
     scheduled_times: ["08:00"],
-    days_of_week: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+    days_of_week: [0, 1, 2, 3, 4, 5, 6],
     send_email: false,
-    email: "",
   });
 
   useEffect(() => {
@@ -72,11 +78,9 @@ const Reminders = () => {
     if (!session) {
       navigate("/auth");
     } else {
-      const email = session.user.email ?? "";
-      setUserEmail(email);
       setFormData(prev => ({
         ...prev,
-        email: email || prev.email,
+        send_email: prev.send_email,
       }));
     }
   };
@@ -105,8 +109,8 @@ const Reminders = () => {
   const loadReminders = async () => {
     const { data, error } = await supabase
       .from("reminders")
-      .select("id, title, description, reminder_type, scheduled_time, days_of_week, is_active, sound_url, send_email, email, created_at, updated_at, user_id")
-      .order("scheduled_time");
+      .select("id, title, description, reminder_type, days_of_week, is_active, send_email, email, send_push, timezone, created_at, updated_at, user_id, reminder_times (id, scheduled_time, is_active)")
+      .order("created_at", { ascending: false });
 
     if (error) {
       toast({
@@ -125,10 +129,10 @@ const Reminders = () => {
     setScheduledTimeouts([]);
   };
 
-  const getNextReminderDate = (reminder: Reminder) => {
-    if (!reminder.days_of_week || reminder.days_of_week.length === 0) return null;
+  const getNextReminderDate = (daysOfWeek: number[], scheduledTime: string) => {
+    if (!daysOfWeek || daysOfWeek.length === 0) return null;
 
-    const [hours, minutes] = reminder.scheduled_time.split(":").map(Number);
+    const [hours, minutes] = scheduledTime.split(":").map(Number);
     const now = new Date();
 
     for (let offset = 0; offset <= 7; offset += 1) {
@@ -136,8 +140,7 @@ const Reminders = () => {
       candidate.setDate(now.getDate() + offset);
       candidate.setHours(hours, minutes, 0, 0);
 
-      const dayKey = INDEX_TO_DAY[candidate.getDay()];
-      if (!reminder.days_of_week.includes(dayKey)) continue;
+      if (!daysOfWeek.includes(candidate.getDay())) continue;
       if (candidate <= now) continue;
 
       return candidate;
@@ -146,21 +149,17 @@ const Reminders = () => {
     return null;
   };
 
-  const scheduleNextReminder = (reminder: Reminder) => {
+  const scheduleNextReminder = (reminder: Reminder, time: ReminderTime) => {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!reminder.is_active) return;
+    if (!time.is_active) return;
 
-    const nextDate = getNextReminderDate(reminder);
+    const nextDate = getNextReminderDate(reminder.days_of_week, time.scheduled_time);
     if (!nextDate) return;
 
     const timeout = nextDate.getTime() - Date.now();
     const timeoutId = window.setTimeout(() => {
-      if (reminder.sound_url && reminder.sound_url !== "default") {
-        const audio = new Audio(reminder.sound_url);
-        audio.play().catch(e => console.log("Erro ao reproduzir som:", e));
-      }
-
       new Notification(reminder.title, {
         body: reminder.description || "Hora do seu lembrete!",
         icon: "/favicon.ico",
@@ -168,7 +167,7 @@ const Reminders = () => {
         requireInteraction: true,
       });
 
-      scheduleNextReminder(reminder);
+      scheduleNextReminder(reminder, time);
     }, timeout);
 
     setScheduledTimeouts(prev => [...prev, timeoutId]);
@@ -179,7 +178,9 @@ const Reminders = () => {
     if (Notification.permission !== "granted") return;
 
     clearScheduledNotifications();
-    reminders.forEach(reminder => scheduleNextReminder(reminder));
+    reminders.forEach(reminder => {
+      reminder.reminder_times?.forEach(time => scheduleNextReminder(reminder, time));
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -210,23 +211,53 @@ const Reminders = () => {
       return;
     }
 
-    const payload = uniqueTimes.map(time => ({
-      user_id: user.id,
-      title: formData.title,
-      description: formData.description,
-      reminder_type: formData.reminder_type as "medication" | "water" | "exercise" | "custom",
-      scheduled_time: time,
-      days_of_week: formData.days_of_week,
-      send_email: formData.send_email,
-      email: formData.send_email ? (formData.email || user.email) : null,
-    }));
+    const { error: timezoneError } = await supabase
+      .from("profiles")
+      .update({ timezone: BRAZIL_TIMEZONE })
+      .eq("id", user.id);
 
-    const { error } = await supabase.from("reminders").insert(payload);
+    if (timezoneError) {
+      console.warn("Erro ao salvar timezone do usuário:", timezoneError);
+    }
 
-    if (error) {
+    const { data: reminder, error: reminderError } = await supabase
+      .from("reminders")
+      .insert({
+        user_id: user.id,
+        title: formData.title,
+        description: formData.description,
+        reminder_type: formData.reminder_type as "medication" | "water" | "exercise" | "custom",
+        days_of_week: formData.days_of_week,
+        send_email: formData.send_email,
+        email: formData.send_email ? user.email : null,
+        timezone: BRAZIL_TIMEZONE,
+      })
+      .select("id")
+      .single();
+
+    if (reminderError || !reminder) {
       toast({
         title: "Erro ao criar lembrete",
-        description: error.message,
+        description: reminderError?.message || "Não foi possível salvar o lembrete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const timesPayload = uniqueTimes.map(time => ({
+      reminder_id: reminder.id,
+      scheduled_time: time,
+      is_active: true,
+    }));
+
+    const { error: timesError } = await supabase
+      .from("reminder_times")
+      .insert(timesPayload);
+
+    if (timesError) {
+      toast({
+        title: "Erro ao salvar horários",
+        description: timesError.message,
         variant: "destructive",
       });
     } else {
@@ -242,9 +273,8 @@ const Reminders = () => {
         description: "",
         reminder_type: "custom",
         scheduled_times: ["08:00"],
-        days_of_week: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+        days_of_week: [0, 1, 2, 3, 4, 5, 6],
         send_email: false,
-        email: userEmail,
       });
       loadReminders();
     }
@@ -268,6 +298,11 @@ const Reminders = () => {
   };
 
   const deleteReminder = async (id: string) => {
+    await supabase
+      .from("reminder_times")
+      .delete()
+      .eq("reminder_id", id);
+
     const { error } = await supabase
       .from("reminders")
       .delete()
@@ -287,16 +322,16 @@ const Reminders = () => {
     }
   };
 
-  const toggleDay = (day: string) => {
+  const toggleDay = (day: number) => {
     setFormData(prev => ({
       ...prev,
       days_of_week: prev.days_of_week.includes(day)
         ? prev.days_of_week.filter(d => d !== day)
-        : [...prev.days_of_week, day]
+        : [...prev.days_of_week, day],
     }));
   };
 
-  const setDaysPreset = (days: string[]) => {
+  const setDaysPreset = (days: number[]) => {
     setFormData(prev => ({
       ...prev,
       days_of_week: days,
@@ -502,7 +537,7 @@ const Reminders = () => {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          setDaysPreset(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])
+                          setDaysPreset([0, 1, 2, 3, 4, 5, 6])
                         }
                       >
                         Todos
@@ -511,7 +546,7 @@ const Reminders = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setDaysPreset(["mon", "tue", "wed", "thu", "fri"])}
+                        onClick={() => setDaysPreset([1, 2, 3, 4, 5])}
                       >
                         Dias úteis
                       </Button>
@@ -519,28 +554,34 @@ const Reminders = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setDaysPreset(["sat", "sun"])}
+                        onClick={() => setDaysPreset([0, 6])}
                       >
                         Fim de semana
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {Object.entries(DAYS_MAP).map(([key, label]) => (
+                      {DAYS.map((day) => (
                         <Button
-                          key={key}
+                          key={day.value}
                           type="button"
-                          variant={formData.days_of_week.includes(key) ? "default" : "outline"}
+                          variant="outline"
                           size="sm"
-                          onClick={() => toggleDay(key)}
+                          onClick={() => toggleDay(day.value)}
+                          className={
+                            formData.days_of_week.includes(day.value)
+                              ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
+                              : "bg-white text-foreground border-border hover:bg-white/90"
+                          }
                         >
-                          {label}
+                          {day.label}
                         </Button>
                       ))}
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       {formData.days_of_week.length > 0
                         ? `Selecionados: ${formData.days_of_week
-                            .map(day => DAYS_MAP[day as keyof typeof DAYS_MAP])
+                            .map(day => DAYS.find(item => item.value === day)?.label)
+                            .filter(Boolean)
                             .join(", ")}`
                         : "Nenhum dia selecionado."}
                     </p>
@@ -560,22 +601,13 @@ const Reminders = () => {
                         }
                       />
                     </div>
-                    {formData.send_email && (
-                      <div>
-                        <Label htmlFor="email">E-mail</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          placeholder={userEmail || "seu@email.com"}
-                          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Se você não preencher, usaremos o e-mail da sua conta.
-                        </p>
-                      </div>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      O envio será feito para o e-mail da sua conta.
+                    </p>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Horários baseados em {BRAZIL_TIMEZONE_LABEL}.
+                  </p>
 
                   <Button type="submit" className="w-full">
                     Criar Lembrete
@@ -612,18 +644,27 @@ const Reminders = () => {
                           <div className="flex flex-col gap-1 text-sm">
                             <div className="flex items-center gap-4">
                               <span className="font-medium">
-                                {reminder.scheduled_time}
+                                {Array.from(
+                                  new Set(
+                                    reminder.reminder_times
+                                      ?.filter((time) => time.is_active)
+                                      .map((time) => time.scheduled_time)
+                                  )
+                                )
+                                  .sort()
+                                  .join(" • ") || "--"}
                               </span>
                               <span className="text-muted-foreground">
                                 {reminder.days_of_week
-                                  .map(d => DAYS_MAP[d as keyof typeof DAYS_MAP])
+                                  .map(day => DAYS.find(item => item.value === day)?.label)
+                                  .filter(Boolean)
                                   .join(", ")}
                               </span>
                             </div>
-                            {reminder.send_email && reminder.email && (
+                            {reminder.send_email && (
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Mail className="h-3 w-3" />
-                                Envia e-mail para {reminder.email}
+                                Envia e-mail para o e-mail cadastrado
                               </span>
                             )}
                           </div>
@@ -646,7 +687,7 @@ const Reminders = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => deleteReminder(reminder.id)}
+                            onClick={() => setDeleteReminderTarget(reminder)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -666,6 +707,40 @@ const Reminders = () => {
           onOpenChange={setIsEditDialogOpen}
           onUpdate={loadReminders}
         />
+
+        <Dialog
+          open={!!deleteReminderTarget}
+          onOpenChange={(open) => {
+            if (!open) setDeleteReminderTarget(null);
+          }}
+        >
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Excluir lembrete?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Essa ação não pode ser desfeita. O lembrete será removido.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteReminderTarget(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (!deleteReminderTarget) return;
+                  await deleteReminder(deleteReminderTarget.id);
+                  setDeleteReminderTarget(null);
+                }}
+              >
+                Excluir
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

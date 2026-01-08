@@ -105,6 +105,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          timezone: string | null
           updated_at: string | null
         }
         Insert: {
@@ -116,6 +117,7 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          timezone?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -127,6 +129,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          timezone?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -134,48 +137,105 @@ export type Database = {
       reminders: {
         Row: {
           created_at: string
-          days_of_week: string[]
+          days_of_week: number[]
           description: string | null
           email: string | null
           id: string
           is_active: boolean
           reminder_type: Database["public"]["Enums"]["reminder_type"]
-          scheduled_time: string
           send_email: boolean | null
-          sound_url: string | null
+          send_push: boolean | null
           title: string
+          timezone: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          days_of_week?: string[]
+          days_of_week?: number[]
           description?: string | null
           email?: string | null
           id?: string
           is_active?: boolean
           reminder_type?: Database["public"]["Enums"]["reminder_type"]
-          scheduled_time: string
           send_email?: boolean | null
-          sound_url?: string | null
+          send_push?: boolean | null
           title: string
+          timezone?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          days_of_week?: string[]
+          days_of_week?: number[]
           description?: string | null
           email?: string | null
           id?: string
           is_active?: boolean
           reminder_type?: Database["public"]["Enums"]["reminder_type"]
-          scheduled_time?: string
           send_email?: boolean | null
-          sound_url?: string | null
+          send_push?: boolean | null
           title?: string
+          timezone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      reminder_logs: {
+        Row: {
+          channel: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          reminder_id: string
+          scheduled_time: string
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          reminder_id: string
+          scheduled_time: string
+          sent_at: string
+          status: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          reminder_id?: string
+          scheduled_time?: string
+          sent_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      reminder_times: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean
+          reminder_id: string
+          scheduled_time: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          reminder_id: string
+          scheduled_time: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          reminder_id?: string
+          scheduled_time?: string
         }
         Relationships: []
       }

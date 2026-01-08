@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,16 +7,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Trash2 } from "lucide-react";
 
 interface Reminder {
   id: string;
   title: string;
   description: string | null;
   reminder_type: "medication" | "water" | "exercise" | "custom";
-  scheduled_time: string;
-  days_of_week: string[];
+  days_of_week: number[];
   is_active: boolean;
-  sound_url: string | null;
+  reminder_times?: { id: string; scheduled_time: string; is_active: boolean }[];
 }
 
 interface EditReminderDialogProps {
@@ -26,21 +26,14 @@ interface EditReminderDialogProps {
   onUpdate: () => void;
 }
 
-const DAYS_MAP = {
-  mon: "Seg",
-  tue: "Ter",
-  wed: "Qua",
-  thu: "Qui",
-  fri: "Sex",
-  sat: "Sáb",
-  sun: "Dom"
-};
-
-const NOTIFICATION_SOUNDS = [
-  { value: "default", label: "Som padrão" },
-  { value: "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3", label: "Sino suave" },
-  { value: "https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3", label: "Notificação alegre" },
-  { value: "https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3", label: "Alerta calmo" },
+const DAYS = [
+  { value: 0, label: "Dom" },
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+  { value: 6, label: "Sáb" },
 ];
 
 export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: EditReminderDialogProps) => {
@@ -49,14 +42,48 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
     title: reminder?.title || "",
     description: reminder?.description || "",
     reminder_type: reminder?.reminder_type || "custom",
-    scheduled_time: reminder?.scheduled_time || "08:00",
-    days_of_week: reminder?.days_of_week || ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-    sound_url: reminder?.sound_url || "default",
+    scheduled_times: reminder?.reminder_times?.map((time) => time.scheduled_time) || ["08:00"],
+    days_of_week: reminder?.days_of_week || [0, 1, 2, 3, 4, 5, 6],
   });
+
+  useEffect(() => {
+    if (!reminder) return;
+    setFormData({
+      title: reminder.title || "",
+      description: reminder.description || "",
+      reminder_type: reminder.reminder_type || "custom",
+      scheduled_times: reminder.reminder_times?.map((time) => time.scheduled_time) || ["08:00"],
+      days_of_week: reminder.days_of_week?.length
+        ? reminder.days_of_week
+        : [0, 1, 2, 3, 4, 5, 6],
+    });
+  }, [reminder]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reminder) return;
+
+    if (formData.days_of_week.length === 0) {
+      toast({
+        title: "Selecione ao menos um dia",
+        description: "Escolha os dias da semana para receber o lembrete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const uniqueTimes = Array.from(
+      new Set(formData.scheduled_times.map(time => time.trim()).filter(Boolean))
+    );
+
+    if (uniqueTimes.length === 0) {
+      toast({
+        title: "Defina pelo menos um horário",
+        description: "Adicione um horário para salvar o lembrete.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { error } = await supabase
       .from("reminders")
@@ -64,9 +91,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
         title: formData.title,
         description: formData.description,
         reminder_type: formData.reminder_type,
-        scheduled_time: formData.scheduled_time,
         days_of_week: formData.days_of_week,
-        sound_url: formData.sound_url === "default" ? null : formData.sound_url,
       })
       .eq("id", reminder.id);
 
@@ -77,6 +102,30 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
         variant: "destructive",
       });
     } else {
+      await supabase
+        .from("reminder_times")
+        .delete()
+        .eq("reminder_id", reminder.id);
+
+      const { error: timesError } = await supabase
+        .from("reminder_times")
+        .insert(
+          uniqueTimes.map((time) => ({
+            reminder_id: reminder.id,
+            scheduled_time: time,
+            is_active: true,
+          }))
+        );
+
+      if (timesError) {
+        toast({
+          title: "Erro ao salvar horários",
+          description: timesError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
         title: "Lembrete atualizado!",
       });
@@ -85,12 +134,34 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
     }
   };
 
-  const toggleDay = (day: string) => {
+  const toggleDay = (day: number) => {
     setFormData(prev => ({
       ...prev,
       days_of_week: prev.days_of_week.includes(day)
         ? prev.days_of_week.filter(d => d !== day)
-        : [...prev.days_of_week, day]
+        : [...prev.days_of_week, day],
+    }));
+  };
+
+  const updateTime = (index: number, value: string) => {
+    setFormData(prev => {
+      const nextTimes = [...prev.scheduled_times];
+      nextTimes[index] = value;
+      return { ...prev, scheduled_times: nextTimes };
+    });
+  };
+
+  const addTime = () => {
+    setFormData(prev => ({
+      ...prev,
+      scheduled_times: [...prev.scheduled_times, "08:00"],
+    }));
+  };
+
+  const removeTime = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      scheduled_times: prev.scheduled_times.filter((_, i) => i !== index),
     }));
   };
 
@@ -143,47 +214,51 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
           </div>
 
           <div>
-            <Label htmlFor="edit-time">Horário</Label>
-            <Input
-              id="edit-time"
-              type="time"
-              value={formData.scheduled_time}
-              onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="edit-sound">Som de notificação</Label>
-            <Select
-              value={formData.sound_url}
-              onValueChange={(value) => setFormData({ ...formData, sound_url: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {NOTIFICATION_SOUNDS.map(sound => (
-                  <SelectItem key={sound.value} value={sound.value}>
-                    {sound.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Horários</Label>
+            <div className="space-y-2 mt-2">
+              {formData.scheduled_times.map((time, index) => (
+                <div key={`time-${index}`} className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    value={time}
+                    onChange={(e) => updateTime(index, e.target.value)}
+                    required
+                  />
+                  {formData.scheduled_times.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeTime(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={addTime}>
+                Adicionar horário
+              </Button>
+            </div>
           </div>
 
           <div>
             <Label>Dias da semana</Label>
             <div className="flex flex-wrap gap-2 mt-2">
-              {Object.entries(DAYS_MAP).map(([key, label]) => (
+              {DAYS.map((day) => (
                 <Button
-                  key={key}
+                  key={day.value}
                   type="button"
-                  variant={formData.days_of_week.includes(key) ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => toggleDay(key)}
+                  onClick={() => toggleDay(day.value)}
+                  className={
+                    formData.days_of_week.includes(day.value)
+                      ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
+                      : "bg-white text-foreground border-border hover:bg-white/90"
+                  }
                 >
-                  {label}
+                  {day.label}
                 </Button>
               ))}
             </div>
