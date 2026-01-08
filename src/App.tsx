@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 const Landing = lazy(() => import("./pages/Landing"));
+const Crisis = lazy(() => import("./pages/Crisis"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const JournalNew = lazy(() => import("./pages/JournalNew"));
@@ -35,7 +36,7 @@ const App = () => (
         >
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/crisis" element={<NotFound />} />
+            <Route path="/crisis" element={<Crisis />} />
             <Route path="/calm-sessions" element={<NotFound />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />

@@ -36,7 +36,7 @@ const Plans = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         body: {
           priceId,
           userId: user.id,
@@ -44,7 +44,10 @@ const Plans = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Checkout error:", error);
+        throw error;
+      }
 
       if (data?.url) {
         window.location.href = data.url;
@@ -53,10 +56,11 @@ const Plans = () => {
 
       toast({
         title: "Erro",
-        description: "Não foi possível iniciar o checkout. Tente novamente.",
+        description: "Checkout não retornou URL. Verifique a configuração do Stripe.",
         variant: "destructive",
       });
     } catch (error) {
+      console.error("Checkout exception:", error);
       toast({
         title: "Erro",
         description: "Não foi possível iniciar o processo de pagamento. Tente novamente.",

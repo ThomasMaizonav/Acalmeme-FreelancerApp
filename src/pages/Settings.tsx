@@ -68,8 +68,10 @@ const Settings = () => {
         .eq("id", user.id)
         .maybeSingle();
 
-      if (profile) {
-        setFullName(profile.full_name || "");
+      if (profile?.full_name) {
+        setFullName(profile.full_name);
+      } else if (user.user_metadata?.full_name) {
+        setFullName(user.user_metadata.full_name);
       }
     } catch (error) {
       console.error("Error loading user data:", error);
@@ -98,6 +100,14 @@ const Settings = () => {
         });
 
       if (error) throw error;
+
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          full_name: fullName,
+        },
+      });
+
+      if (authError) throw authError;
 
       toast({
         title: "Sucesso!",
