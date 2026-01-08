@@ -210,10 +210,13 @@ const Settings = () => {
                         id="fullName"
                         type="text"
                         value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        disabled
                         placeholder="Seu nome completo"
                         className="mt-1.5"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        O nome não pode ser alterado
+                      </p>
                     </div>
                     <div>
                       <Label htmlFor="email">E-mail</Label>
@@ -247,7 +250,7 @@ const Settings = () => {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button onClick={handleSaveProfile} className="gap-2">
+                  <Button onClick={handleSaveProfile} className="gap-2" disabled>
                     <Save className="w-4 h-4" />
                     Salvar Alterações
                   </Button>

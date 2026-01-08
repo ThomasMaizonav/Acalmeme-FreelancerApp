@@ -68,20 +68,54 @@ export const useFreeTrialStatus = () => {
       }
 
       if (profile && !profile.free_trial_used && profile.free_trial_started_at) {
-        const formatDate = (date: Date) =>
-          new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(date);
-        const toUtcTimestamp = (dateString: string) => {
-          const [year, month, day] = dateString.split("-").map(Number);
-          return Date.UTC(year, month - 1, day);
-        };
+        const formatter = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "America/Sao_Paulo",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23",
+        });
+        const toParts = (date: Date) =>
+          formatter.formatToParts(date).reduce<Record<string, string>>((acc, part) => {
+            if (part.type !== "literal") acc[part.type] = part.value;
+            return acc;
+          }, {});
+        const partsToDate = (parts: Record<string, string>) =>
+          new Date(
+            Number(parts.year),
+            Number(parts.month) - 1,
+            Number(parts.day),
+            Number(parts.hour),
+            Number(parts.minute),
+            0,
+            0,
+          );
 
-        const startDateStr = formatDate(new Date(profile.free_trial_started_at));
-        const todayStr = formatDate(new Date());
-        const daysElapsed =
-          (toUtcTimestamp(todayStr) - toUtcTimestamp(startDateStr)) / (1000 * 60 * 60 * 24);
-        const daysLeft = Math.max(0, 30 - Math.floor(daysElapsed));
+        const startParts = toParts(new Date(profile.free_trial_started_at));
+        const nowParts = toParts(new Date());
 
-        if (daysLeft > 0) {
+        const startDayEnd = new Date(
+          Number(startParts.year),
+          Number(startParts.month) - 1,
+          Number(startParts.day),
+          23,
+          59,
+          0,
+          0,
+        );
+        const nowLocal = partsToDate(nowParts);
+        const hasPassedTodayCutoff =
+          nowLocal.getHours() > 23 || (nowLocal.getHours() === 23 && nowLocal.getMinutes() >= 59);
+
+        const diffMs = nowLocal.getTime() - startDayEnd.getTime();
+        const fullDaysPassed = diffMs > 0 ? Math.floor(diffMs / (1000 * 60 * 60 * 24)) : 0;
+        const daysLeft = Math.max(0, 30 - fullDaysPassed);
+
+        const trialExpired = daysLeft === 0 && hasPassedTodayCutoff;
+
+        if (!trialExpired) {
           setIsInFreeTrial(true);
           setFreeTrialDaysLeft(daysLeft);
         } else {
