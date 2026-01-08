@@ -11,6 +11,7 @@ import { format, addDays, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useUserProgress } from "@/hooks/useUserProgress";
 
 interface JournalEntry {
   id: string;
@@ -22,16 +23,25 @@ interface JournalEntry {
 const JournalNew = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { updateProgress } = useUserProgress();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [entry, setEntry] = useState("");
   const [existingEntry, setExistingEntry] = useState<JournalEntry | null>(null);
   const [loading, setLoading] = useState(false);
   const [weekEntries, setWeekEntries] = useState<Map<string, JournalEntry>>(new Map());
+  const [progressUpdated, setProgressUpdated] = useState(false);
 
   useEffect(() => {
     loadEntryForDate(selectedDate);
     loadWeekEntries(selectedDate);
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (!progressUpdated) {
+      updateProgress();
+      setProgressUpdated(true);
+    }
+  }, [progressUpdated, updateProgress]);
 
   const loadWeekEntries = async (date: Date) => {
     try {

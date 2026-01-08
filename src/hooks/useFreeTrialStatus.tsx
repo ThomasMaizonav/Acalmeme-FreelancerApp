@@ -68,18 +68,26 @@ export const useFreeTrialStatus = () => {
       }
 
       if (profile && !profile.free_trial_used && profile.free_trial_started_at) {
-        const startDate = new Date(profile.free_trial_started_at);
-        const now = new Date();
-        const diffTime = 30 * 24 * 60 * 60 * 1000 - (now.getTime() - startDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const formatDate = (date: Date) =>
+          new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(date);
+        const toUtcTimestamp = (dateString: string) => {
+          const [year, month, day] = dateString.split("-").map(Number);
+          return Date.UTC(year, month - 1, day);
+        };
 
-        if (diffDays > 0) {
+        const startDateStr = formatDate(new Date(profile.free_trial_started_at));
+        const todayStr = formatDate(new Date());
+        const daysElapsed =
+          (toUtcTimestamp(todayStr) - toUtcTimestamp(startDateStr)) / (1000 * 60 * 60 * 24);
+        const daysLeft = Math.max(0, 30 - Math.floor(daysElapsed));
+
+        if (daysLeft > 0) {
           setIsInFreeTrial(true);
-          setFreeTrialDaysLeft(diffDays);
+          setFreeTrialDaysLeft(daysLeft);
         } else {
           setIsInFreeTrial(false);
           setFreeTrialDaysLeft(0);
-          
+
           // Mark free trial as used
           await supabase
             .from("profiles")

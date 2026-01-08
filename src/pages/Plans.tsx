@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, ArrowLeft, Crown, Shield, Sparkles, CreditCard } from "lucide-react";
@@ -10,13 +11,17 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const Plans = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubscribe = async () => {
     try {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         navigate('/auth');
+        setIsSubmitting(false);
         return;
       }
 
@@ -41,15 +46,24 @@ const Plans = () => {
 
       if (error) throw error;
 
-      if (data.url) {
+      if (data?.url) {
         window.location.href = data.url;
+        return;
       }
+
+      toast({
+        title: "Erro",
+        description: "Não foi possível iniciar o checkout. Tente novamente.",
+        variant: "destructive",
+      });
     } catch (error) {
       toast({
         title: "Erro",
         description: "Não foi possível iniciar o processo de pagamento. Tente novamente.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -173,9 +187,10 @@ const Plans = () => {
               <Button 
                 className="w-full bg-gradient-hero text-white hover:opacity-90 text-base py-6"
                 onClick={handleSubscribe}
+                disabled={isSubmitting}
               >
                 <CreditCard className="w-5 h-5 mr-2" />
-                Assinar Agora
+                {isSubmitting ? "Carregando..." : "Assinar Agora"}
               </Button>
               <p className="text-xs text-muted-foreground text-center mt-4">
                 Cancele a qualquer momento. Sem multas.
