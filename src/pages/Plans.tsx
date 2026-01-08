@@ -17,36 +17,63 @@ const Plans = () => {
     try {
       if (isSubmitting) return;
       setIsSubmitting(true);
+
       const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) {
-        navigate('/auth');
-        setIsSubmitting(false);
+        navigate("/auth");
         return;
       }
 
       const priceId = import.meta.env.VITE_STRIPE_PRICE_ID;
-      
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       if (!priceId) {
         toast({
           title: "Erro de configuração",
-          description: "O plano não está configurado corretamente. Entre em contato com o suporte.",
+          description: "VITE_STRIPE_PRICE_ID não definido.",
           variant: "destructive",
         });
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: {
+      if (!supabaseKey) {
+        toast({
+          title: "Erro de configuração",
+          description: "VITE_SUPABASE_PUBLISHABLE_KEY não definido.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const endpoint =
+        "https://zdegrjywuybymohxtfxy.supabase.co/functions/v1/create-checkout-session";
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
           priceId,
           userId: user.id,
           email: user.email,
-        },
+          successUrl: `${window.location.origin}/payment-success`,
+          cancelUrl: `${window.location.origin}/plans`,
+        }),
       });
 
-      if (error) {
-        console.error("Checkout error:", error);
-        throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Checkout error:", data);
+        toast({
+          title: "Erro",
+          description: data?.error || "Erro ao criar sessão do checkout.",
+          variant: "destructive",
+        });
+        return;
       }
 
       if (data?.url) {
