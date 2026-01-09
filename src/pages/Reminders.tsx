@@ -390,7 +390,7 @@ const Reminders = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -427,11 +427,14 @@ const Reminders = () => {
                   Novo Lembrete
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-2xl w-full max-h-[92vh] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>Criar Novo Lembrete</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form
+                  onSubmit={handleSubmit}
+                  className="flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-2"
+                >
                   {/* templates */}
                   <div className="flex gap-2 flex-wrap">
                     <Button
@@ -460,7 +463,8 @@ const Reminders = () => {
                     </Button>
                   </div>
 
-                  <div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
                     <Label htmlFor="title">Título</Label>
                     <Input
                       id="title"
@@ -469,6 +473,24 @@ const Reminders = () => {
                       placeholder="Ex: Tomar remédio"
                       required
                     />
+                    </div>
+                    <div>
+                      <Label htmlFor="type">Tipo</Label>
+                      <Select
+                        value={formData.reminder_type}
+                        onValueChange={(value) => setFormData({ ...formData, reminder_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="medication">Medicamento</SelectItem>
+                          <SelectItem value="water">Água</SelectItem>
+                          <SelectItem value="exercise">Exercício</SelectItem>
+                          <SelectItem value="custom">Personalizado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div>
@@ -482,25 +504,32 @@ const Reminders = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="type">Tipo</Label>
-                    <Select
-                      value={formData.reminder_type}
-                      onValueChange={(value) => setFormData({ ...formData, reminder_type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="medication">Medicamento</SelectItem>
-                        <SelectItem value="water">Água</SelectItem>
-                        <SelectItem value="exercise">Exercício</SelectItem>
-                        <SelectItem value="custom">Personalizado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
                     <Label>Horários</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {[
+                        { label: "Manhã 08:00", value: "08:00" },
+                        { label: "Almoço 12:00", value: "12:00" },
+                        { label: "Tarde 16:00", value: "16:00" },
+                        { label: "Noite 20:00", value: "20:00" },
+                      ].map((preset) => (
+                        <Button
+                          key={preset.value}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              scheduled_times: prev.scheduled_times.includes(preset.value)
+                                ? prev.scheduled_times
+                                : [...prev.scheduled_times, preset.value],
+                            }))
+                          }
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
                     <div className="space-y-2 mt-2">
                       {formData.scheduled_times.map((time, index) => (
                         <div key={`${time}-${index}`} className="flex items-center gap-2">
@@ -527,6 +556,9 @@ const Reminders = () => {
                         Adicionar horário
                       </Button>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Dica: use os botões rápidos para adicionar horários comuns.
+                    </p>
                   </div>
 
                   <div>
@@ -609,9 +641,11 @@ const Reminders = () => {
                     Horários baseados em {BRAZIL_TIMEZONE_LABEL}.
                   </p>
 
-                  <Button type="submit" className="w-full">
-                    Criar Lembrete
-                  </Button>
+                  <div className="sticky bottom-0 bg-background pt-3 pb-1">
+                    <Button type="submit" className="w-full">
+                      Criar Lembrete
+                    </Button>
+                  </div>
                 </form>
               </DialogContent>
             </Dialog>
@@ -624,7 +658,7 @@ const Reminders = () => {
               ) : (
                 reminders.map((reminder) => (
                   <Card key={reminder.id}>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-5">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
