@@ -734,24 +734,6 @@ const Reminders = () => {
           </CardContent>
         </Card>
 
-        useEffect(() => {
-  if (!reminder || !open) return;
-
-  setForm({
-    title: reminder.title ?? "",
-    description: reminder.description ?? "",
-    reminder_type: reminder.reminder_type ?? "custom",
-    days_of_week: reminder.days_of_week ?? [0,1,2,3,4,5,6],
-    send_email: !!reminder.send_email,
-    scheduled_times:
-      (reminder.reminder_times ?? [])
-        .filter(t => t.is_active ?? true)
-        .map(t => t.scheduled_time)
-        .sort(),
-  });
-}, [reminder, open]);
-
-
         <Dialog
           open={!!deleteReminderTarget}
           onOpenChange={(open) => {
