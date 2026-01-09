@@ -11,6 +11,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const JournalNew = lazy(() => import("./pages/JournalNew"));
 const Admin = lazy(() => import("./pages/Admin"));
+const CalmSession = lazy(() => import("./pages/CalmSession"));
 const Reminders = lazy(() => import("./pages/Reminders"));
 const Plans = lazy(() => import("./pages/Plans"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
@@ -37,7 +38,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/crisis" element={<Crisis />} />
-            <Route path="/calm-sessions" element={<NotFound />} />
+            <Route path="/calm-sessions" element={<CalmSession />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/journal" element={<JournalNew />} />
