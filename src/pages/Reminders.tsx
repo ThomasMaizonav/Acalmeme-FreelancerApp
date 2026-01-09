@@ -734,6 +734,13 @@ const Reminders = () => {
           </CardContent>
         </Card>
 
+        <EditReminderDialog
+          reminder={editingReminder}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onUpdate={loadReminders}
+        />
+
         <Dialog
           open={!!deleteReminderTarget}
           onOpenChange={(open) => {
