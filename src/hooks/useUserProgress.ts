@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -9,6 +9,8 @@ export interface UserProgress {
   last_activity_date: string | null;
 }
 
+const toDateOnly = (d: Date) => d.toISOString().split("T")[0];
+
 export const useUserProgress = () => {
   const [progress, setProgress] = useState<UserProgress>({
     current_streak: 0,
@@ -16,21 +18,21 @@ export const useUserProgress = () => {
     total_practice_days: 0,
     last_activity_date: null,
   });
+
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchProgress();
-  }, []);
-
-  const fetchProgress = async () => {
+  const fetchProgress = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) return;
 
       const { data, error } = await supabase
         .from("user_progress")
-        .select("*")
+        .select("current_streak,best_streak,total_practice_days,last_activity_date")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -38,10 +40,10 @@ export const useUserProgress = () => {
 
       if (data) {
         setProgress({
-          current_streak: data.current_streak || 0,
-          best_streak: data.best_streak || 0,
-          total_practice_days: data.total_practice_days || 0,
-          last_activity_date: data.last_activity_date,
+          current_streak: data.current_streak ?? 0,
+          best_streak: data.best_streak ?? 0,
+          total_practice_days: data.total_practice_days ?? 0,
+          last_activity_date: data.last_activity_date ?? null,
         });
       }
     } catch (error) {
@@ -49,56 +51,80 @@ export const useUserProgress = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const updateProgress = async () => {
+  useEffect(() => {
+    fetchProgress();
+  }, [fetchProgress]);
+
+  const updateProgress = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) return;
 
-      const today = new Date().toISOString().split("T")[0];
-      
-      // Check if already completed today
-      if (progress.last_activity_date === today) {
-        return;
-      }
+      // 1) Puxa o progresso mais recente direto do banco (evita stale state)
+      const { data: currentRow, error: readError } = await supabase
+        .from("user_progress")
+        .select("current_streak,best_streak,total_practice_days,last_activity_date")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (readError) throw readError;
+
+      const current: UserProgress = {
+        current_streak: currentRow?.current_streak ?? 0,
+        best_streak: currentRow?.best_streak ?? 0,
+        total_practice_days: currentRow?.total_practice_days ?? 0,
+        last_activity_date: currentRow?.last_activity_date ?? null,
+      };
+
+      const today = toDateOnly(new Date());
+
+      // 2) Se já atualizou hoje, não faz nada (evita spam)
+      if (current.last_activity_date === today) return;
 
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split("T")[0];
+      const yesterdayStr = toDateOnly(yesterday);
 
+      // 3) Calcula streak
       let newStreak = 1;
-      
-      // If last activity was yesterday, increment streak
-      if (progress.last_activity_date === yesterdayStr) {
-        newStreak = progress.current_streak + 1;
+      if (current.last_activity_date === yesterdayStr) {
+        newStreak = current.current_streak + 1;
       }
 
-      const newBestStreak = Math.max(newStreak, progress.best_streak);
-      const newTotalDays = progress.total_practice_days + 1;
+      const newBestStreak = Math.max(newStreak, current.best_streak);
+      const newTotalDays = current.total_practice_days + 1;
 
-      const { data, error } = await supabase
+      // 4) UPSERT com onConflict pra não dar 409/23505
+      const { data: saved, error: upsertError } = await supabase
         .from("user_progress")
-        .upsert({
-          user_id: user.id,
-          current_streak: newStreak,
-          best_streak: newBestStreak,
-          total_practice_days: newTotalDays,
-          last_activity_date: today,
-        })
-        .select()
+        .upsert(
+          {
+            user_id: user.id,
+            current_streak: newStreak,
+            best_streak: newBestStreak,
+            total_practice_days: newTotalDays,
+            last_activity_date: today,
+          },
+          { onConflict: "user_id" }
+        )
+        .select("current_streak,best_streak,total_practice_days,last_activity_date")
         .single();
 
-      if (error) throw error;
+      if (upsertError) throw upsertError;
 
       setProgress({
-        current_streak: data.current_streak,
-        best_streak: data.best_streak,
-        total_practice_days: data.total_practice_days,
-        last_activity_date: data.last_activity_date,
+        current_streak: saved.current_streak ?? 0,
+        best_streak: saved.best_streak ?? 0,
+        total_practice_days: saved.total_practice_days ?? 0,
+        last_activity_date: saved.last_activity_date ?? null,
       });
 
-      // Show reward notification
+      // 5) Toasts (igual ao seu)
       if (newStreak === 7 || newStreak === 15) {
         toast({
           title: "🏅 Nova medalha conquistada!",
@@ -128,7 +154,7 @@ export const useUserProgress = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
   return {
     progress,
