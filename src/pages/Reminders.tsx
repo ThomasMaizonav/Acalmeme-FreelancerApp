@@ -16,7 +16,7 @@ import { EditReminderDialog } from "@/components/EditReminderDialog";
 interface ReminderTime {
   id: string;
   scheduled_time: string;
-  is_active: boolean;
+  is_active?: boolean;
 }
 
 interface Reminder {
@@ -111,7 +111,7 @@ const Reminders = () => {
       .from("reminders")
       .select(`
         id, title, description, reminder_type, days_of_week, is_active, send_email, email, timezone, created_at, updated_at, user_id,
-        reminder_times (id, scheduled_time, created_at)
+        reminder_times (id, scheduled_time, is_active, created_at)
       `)
       .order("created_at", { ascending: false });
 
@@ -122,8 +122,8 @@ const Reminders = () => {
         variant: "destructive",
       });
     } else {
-      setReminders(data || []);
-      scheduleNotifications(data || []);
+      setReminders((data as Reminder[]) || []);
+      scheduleNotifications((data as Reminder[]) || []);
     }
   };
 
@@ -156,7 +156,7 @@ const Reminders = () => {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!reminder.is_active) return;
-    if (!time.is_active) return;
+    if (!(time.is_active ?? true)) return;
 
     const nextDate = getNextReminderDate(reminder.days_of_week, time.scheduled_time);
     if (!nextDate) return;
@@ -684,7 +684,7 @@ const Reminders = () => {
                                 {Array.from(
                                   new Set(
                                     reminder.reminder_times
-                                      ?.filter((time) => time.is_active)
+                                      ?.filter((time) => time.is_active ?? true)
                                       .map((time) => time.scheduled_time)
                                   )
                                 )
