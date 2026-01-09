@@ -109,10 +109,10 @@ const Reminders = () => {
   const loadReminders = async () => {
     const { data, error } = await supabase
       .from("reminders")
-.select(`
-  id, title, description, reminder_type, days_of_week, is_active, send_email, email, send_push, timezone, created_at, updated_at, user_id,
-  reminder_times (id, scheduled_time, created_at)
-`)
+      .select(`
+        id, title, description, reminder_type, days_of_week, is_active, send_email, email, timezone, created_at, updated_at, user_id,
+        reminder_times (id, scheduled_time, created_at)
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
