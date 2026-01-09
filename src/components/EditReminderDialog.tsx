@@ -16,7 +16,7 @@ interface Reminder {
   reminder_type: "medication" | "water" | "exercise" | "custom";
   days_of_week: number[];
   is_active: boolean;
-  reminder_times?: { id: string; scheduled_time: string; is_active: boolean }[];
+  reminder_times?: { id: string; scheduled_time: string; is_active?: boolean }[];
 }
 
 interface EditReminderDialogProps {
@@ -47,17 +47,21 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
   });
 
   useEffect(() => {
-    if (!reminder) return;
+    if (!reminder || !open) return;
     setFormData({
       title: reminder.title || "",
       description: reminder.description || "",
       reminder_type: reminder.reminder_type || "custom",
-      scheduled_times: reminder.reminder_times?.map((time) => time.scheduled_time) || ["08:00"],
+      scheduled_times:
+        reminder.reminder_times
+          ?.filter((time) => time.is_active ?? true)
+          .map((time) => time.scheduled_time)
+          .sort() || ["08:00"],
       days_of_week: reminder.days_of_week?.length
         ? reminder.days_of_week
         : [0, 1, 2, 3, 4, 5, 6],
     });
-  }, [reminder]);
+  }, [reminder, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,13 +89,17 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       return;
     }
 
+    const days = (formData.days_of_week ?? [])
+      .map((day) => Number(day))
+      .filter((value) => Number.isFinite(value));
+
     const { error } = await supabase
       .from("reminders")
       .update({
         title: formData.title,
         description: formData.description,
         reminder_type: formData.reminder_type,
-        days_of_week: formData.days_of_week,
+        days_of_week: days,
       })
       .eq("id", reminder.id);
 

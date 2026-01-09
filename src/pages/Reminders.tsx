@@ -16,7 +16,7 @@ import { EditReminderDialog } from "@/components/EditReminderDialog";
 interface ReminderTime {
   id: string;
   scheduled_time: string;
-  is_active?: boolean;
+  is_active: boolean;
 }
 
 interface Reminder {
@@ -107,30 +107,26 @@ const Reminders = () => {
   };
 
   const loadReminders = async () => {
-    const { data, error } = await supabase
-      .from("reminders")
-      .select(`
-        id, title, description, reminder_type, days_of_week, is_active, send_email, email, timezone, created_at, updated_at, user_id,
-        reminder_times (id, scheduled_time, is_active, created_at)
-      `)
-      .order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("reminders")
+    .select(`
+      id, title, description, reminder_type, days_of_week, is_active, send_email, email, timezone, created_at, updated_at, user_id,
+      reminder_times (id, scheduled_time, is_active, created_at)
+    `)
+    .order("created_at", { ascending: false });
 
-    if (error) {
-      toast({
-        title: "Erro ao carregar lembretes",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      setReminders((data as Reminder[]) || []);
-      scheduleNotifications((data as Reminder[]) || []);
-    }
-  };
+  if (error) {
+    toast({
+      title: "Erro ao carregar lembretes",
+      description: error.message,
+      variant: "destructive",
+    });
+  } else {
+    setReminders((data as Reminder[]) || []);
+    scheduleNotifications((data as Reminder[]) || []);
+  }
+};
 
-  const clearScheduledNotifications = () => {
-    scheduledTimeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
-    setScheduledTimeouts([]);
-  };
 
   const getNextReminderDate = (daysOfWeek: number[], scheduledTime: string) => {
     if (!daysOfWeek || daysOfWeek.length === 0) return null;
@@ -156,7 +152,7 @@ const Reminders = () => {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!reminder.is_active) return;
-    if (!(time.is_active ?? true)) return;
+    if (!time.is_active) return;
 
     const nextDate = getNextReminderDate(reminder.days_of_week, time.scheduled_time);
     if (!nextDate) return;
@@ -230,7 +226,7 @@ const Reminders = () => {
         title: formData.title,
         description: formData.description,
         reminder_type: formData.reminder_type as "medication" | "water" | "exercise" | "custom",
-        days_of_week: formData.days_of_week,
+        days_of_week: formData.days_of_week.map(d => Number(d)),
         send_email: formData.send_email,
         email: formData.send_email ? user.email : null,
         timezone: BRAZIL_TIMEZONE,
@@ -684,7 +680,7 @@ const Reminders = () => {
                                 {Array.from(
                                   new Set(
                                     reminder.reminder_times
-                                      ?.filter((time) => time.is_active ?? true)
+                                      ?.filter((time) => time.is_active)
                                       .map((time) => time.scheduled_time)
                                   )
                                 )
@@ -738,12 +734,23 @@ const Reminders = () => {
           </CardContent>
         </Card>
 
-        <EditReminderDialog
-          reminder={editingReminder}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onUpdate={loadReminders}
-        />
+        useEffect(() => {
+  if (!reminder || !open) return;
+
+  setForm({
+    title: reminder.title ?? "",
+    description: reminder.description ?? "",
+    reminder_type: reminder.reminder_type ?? "custom",
+    days_of_week: reminder.days_of_week ?? [0,1,2,3,4,5,6],
+    send_email: !!reminder.send_email,
+    scheduled_times:
+      (reminder.reminder_times ?? [])
+        .filter(t => t.is_active ?? true)
+        .map(t => t.scheduled_time)
+        .sort(),
+  });
+}, [reminder, open]);
+
 
         <Dialog
           open={!!deleteReminderTarget}
