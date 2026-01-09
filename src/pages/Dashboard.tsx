@@ -161,7 +161,7 @@ const Dashboard = () => {
 
             <Card
               className="p-6 glass shadow-soft hover:shadow-calm transition-all duration-300 cursor-pointer group"
-              onClick={() => navigate("/crisis")}
+              onClick={() => navigate("/calm-sessions")}
             >
               <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Wind className="w-6 h-6 text-accent" />
@@ -174,7 +174,7 @@ const Dashboard = () => {
 
             <Card
               className="p-6 glass shadow-soft hover:shadow-calm transition-all duration-300 cursor-pointer group"
-              onClick={() => navigate("/NotFound")}
+              onClick={() => navigate("/crisis")}
             >
               <div className="w-12 h-12 bg-destructive/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Bell className="w-6 h-6 text-destructive" />
