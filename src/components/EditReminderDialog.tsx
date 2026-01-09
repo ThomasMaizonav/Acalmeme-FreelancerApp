@@ -95,10 +95,6 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       .map((day) => Number(day))
       .filter((value) => Number.isFinite(value));
 
-    const days = (formData.days_of_week ?? [])
-      .map((day) => Number(day))
-      .filter((value) => Number.isFinite(value));
-
     const { error } = await supabase
       .from("reminders")
       .update({
