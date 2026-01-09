@@ -48,6 +48,10 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
 
   useEffect(() => {
     if (!reminder || !open) return;
+    const days = (reminder.days_of_week ?? [])
+      .map((day) => Number(day))
+      .filter((value) => Number.isFinite(value));
+
     setFormData({
       title: reminder.title || "",
       description: reminder.description || "",
@@ -57,9 +61,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
           ?.filter((time) => time.is_active ?? true)
           .map((time) => time.scheduled_time)
           .sort() || ["08:00"],
-      days_of_week: reminder.days_of_week?.length
-        ? reminder.days_of_week
-        : [0, 1, 2, 3, 4, 5, 6],
+      days_of_week: days.length ? days : [0, 1, 2, 3, 4, 5, 6],
     });
   }, [reminder, open]);
 
@@ -88,6 +90,10 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       });
       return;
     }
+
+    const days = (formData.days_of_week ?? [])
+      .map((day) => Number(day))
+      .filter((value) => Number.isFinite(value));
 
     const days = (formData.days_of_week ?? [])
       .map((day) => Number(day))

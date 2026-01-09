@@ -67,6 +67,9 @@ const Reminders = () => {
     send_email: false,
   });
 
+  const normalizeDays = (days?: Array<number | string> | null) =>
+    (days ?? []).map((day) => Number(day)).filter((value) => Number.isFinite(value));
+
   useEffect(() => {
     checkAuth();
     loadReminders();
@@ -107,25 +110,30 @@ const Reminders = () => {
   };
 
   const loadReminders = async () => {
-  const { data, error } = await supabase
-    .from("reminders")
-    .select(`
-      id, title, description, reminder_type, days_of_week, is_active, send_email, email, timezone, created_at, updated_at, user_id,
-      reminder_times (id, scheduled_time, is_active, created_at)
-    `)
-    .order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("reminders")
+      .select(`
+        id, title, description, reminder_type, days_of_week, is_active, send_email, email, timezone, created_at, updated_at, user_id,
+        reminder_times (id, scheduled_time, is_active, created_at)
+      `)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    toast({
-      title: "Erro ao carregar lembretes",
-      description: error.message,
-      variant: "destructive",
-    });
-  } else {
-    setReminders((data as Reminder[]) || []);
-    scheduleNotifications((data as Reminder[]) || []);
-  }
-};
+    if (error) {
+      toast({
+        title: "Erro ao carregar lembretes",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      const normalized = (data ?? []).map((reminder) => ({
+        ...reminder,
+        days_of_week: normalizeDays(reminder.days_of_week),
+        reminder_times: reminder.reminder_times ?? [],
+      }));
+      setReminders((normalized as Reminder[]) || []);
+      scheduleNotifications((normalized as Reminder[]) || []);
+    }
+  };
 
 
   const getNextReminderDate = (daysOfWeek: number[], scheduledTime: string) => {
@@ -152,7 +160,7 @@ const Reminders = () => {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!reminder.is_active) return;
-    if (!time.is_active) return;
+    if (!(time.is_active ?? true)) return;
 
     const nextDate = getNextReminderDate(reminder.days_of_week, time.scheduled_time);
     if (!nextDate) return;
