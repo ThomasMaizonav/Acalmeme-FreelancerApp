@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 const Landing = lazy(() => import("./pages/Landing"));
 const Crisis = lazy(() => import("./pages/Crisis"));
 const Auth = lazy(() => import("./pages/Auth"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const JournalNew = lazy(() => import("./pages/JournalNew"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/crisis" element={<Crisis />} />
             <Route path="/calm-sessions" element={<CalmSession />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/journal" element={<JournalNew />} />
             <Route path="/admin" element={<Admin />} />

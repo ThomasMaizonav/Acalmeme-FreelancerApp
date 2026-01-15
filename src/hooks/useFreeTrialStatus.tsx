@@ -54,13 +54,24 @@ export const useFreeTrialStatus = () => {
 
       if (!profile || (!profile.free_trial_used && !profile.free_trial_started_at)) {
         const startedAt = new Date().toISOString();
-        await supabase
-          .from("profiles")
-          .upsert({
-            id: user.id,
-            free_trial_started_at: startedAt,
-            free_trial_used: false,
-          });
+
+        if (!profile) {
+          await supabase
+            .from("profiles")
+            .upsert({
+              id: user.id,
+              free_trial_started_at: startedAt,
+              free_trial_used: false,
+            });
+        } else {
+          await supabase
+            .from("profiles")
+            .update({
+              free_trial_started_at: startedAt,
+            })
+            .eq("id", user.id)
+            .is("free_trial_started_at", null);
+        }
 
         setIsInFreeTrial(true);
         setFreeTrialDaysLeft(30);

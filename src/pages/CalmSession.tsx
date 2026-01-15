@@ -12,7 +12,7 @@ const DURATIONS = [
 ];
 
 const RELAXING_MUSIC_URL =
-  "https://cdn.pixabay.com/download/audio/2022/03/15/audio_8cb749d484.mp3?filename=ambient-piano-ampamp-strings-10711.mp3";
+  "/public/meditationMusic.mp3";
 
 const CalmSession = () => {
   const navigate = useNavigate();

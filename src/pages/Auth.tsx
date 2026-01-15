@@ -46,6 +46,16 @@ const Auth = () => {
     confirmPassword: "",
   });
 
+  const syncProfileEmail = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      await supabase
+        .from("profiles")
+        .update({ email: user.email })
+        .eq("id", user.id);
+    }
+  };
+
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const mode = searchParams.get("mode");
@@ -74,6 +84,9 @@ const Auth = () => {
       if (event === "PASSWORD_RECOVERY") {
         setIsLogin(true);
         setIsRecoveryMode(true);
+      }
+      if (event === "SIGNED_IN") {
+        syncProfileEmail();
       }
     });
 
