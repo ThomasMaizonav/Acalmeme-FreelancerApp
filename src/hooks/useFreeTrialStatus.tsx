@@ -9,8 +9,74 @@ export const useFreeTrialStatus = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const { isPremium } = useSubscription();
 
+  const saoPauloFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const toParts = (date: Date) =>
+    saoPauloFormatter.formatToParts(date).reduce<Record<string, string>>((acc, part) => {
+      if (part.type !== "literal") acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  const partsToDate = (parts: Record<string, string>) =>
+    new Date(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      Number(parts.hour),
+      Number(parts.minute),
+      Number(parts.second || "0"),
+      0,
+    );
+
+  const getSaoPauloNow = () => partsToDate(toParts(new Date()));
+
   useEffect(() => {
+    let timeoutId: number | null = null;
+    let canceled = false;
+
+    const scheduleNextCheck = () => {
+      const nowLocal = getSaoPauloNow();
+      const cutoff = new Date(
+        nowLocal.getFullYear(),
+        nowLocal.getMonth(),
+        nowLocal.getDate(),
+        23,
+        59,
+        0,
+        0,
+      );
+
+      if (nowLocal.getTime() > cutoff.getTime()) {
+        cutoff.setDate(cutoff.getDate() + 1);
+      }
+
+      const delay = cutoff.getTime() - nowLocal.getTime() + 1000;
+      timeoutId = window.setTimeout(async () => {
+        await checkFreeTrialStatus();
+        if (!canceled) {
+          scheduleNextCheck();
+        }
+      }, delay);
+    };
+
     checkFreeTrialStatus();
+    scheduleNextCheck();
+
+    return () => {
+      canceled = true;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [isPremium]);
 
   const checkFreeTrialStatus = async () => {
@@ -79,34 +145,8 @@ export const useFreeTrialStatus = () => {
       }
 
       if (profile && !profile.free_trial_used && profile.free_trial_started_at) {
-        const formatter = new Intl.DateTimeFormat("en-CA", {
-          timeZone: "America/Sao_Paulo",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          hourCycle: "h23",
-        });
-        const toParts = (date: Date) =>
-          formatter.formatToParts(date).reduce<Record<string, string>>((acc, part) => {
-            if (part.type !== "literal") acc[part.type] = part.value;
-            return acc;
-          }, {});
-        const partsToDate = (parts: Record<string, string>) =>
-          new Date(
-            Number(parts.year),
-            Number(parts.month) - 1,
-            Number(parts.day),
-            Number(parts.hour),
-            Number(parts.minute),
-            0,
-            0,
-          );
-
         const startParts = toParts(new Date(profile.free_trial_started_at));
-        const nowParts = toParts(new Date());
-
+        const nowLocal = getSaoPauloNow();
         const startDayEnd = new Date(
           Number(startParts.year),
           Number(startParts.month) - 1,
@@ -116,7 +156,6 @@ export const useFreeTrialStatus = () => {
           0,
           0,
         );
-        const nowLocal = partsToDate(nowParts);
         const hasPassedTodayCutoff =
           nowLocal.getHours() > 23 || (nowLocal.getHours() === 23 && nowLocal.getMinutes() >= 59);
 

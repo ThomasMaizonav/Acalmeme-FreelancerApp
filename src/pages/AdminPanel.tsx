@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, CreditCard, Calendar, Activity, Mail, Key, Search, Edit, Save, X, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Users, CreditCard, Calendar, Activity, Mail, Key, Search, Edit, Save, X, Eye, EyeOff, Crown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ interface UserWithSubscription {
   free_trial_started_at?: string;
   free_trial_used?: boolean;
   subscription?: {
+    id?: string;
     status: string;
     current_period_end: string;
     current_period_start: string;
@@ -66,6 +67,7 @@ const AdminPanel = () => {
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [updatingSubscriptionId, setUpdatingSubscriptionId] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<FinancialMetrics>({
     totalRevenue: 0,
     mrr: 0,
@@ -331,6 +333,110 @@ const AdminPanel = () => {
     setEditedName(user.full_name || "");
     setNewPassword("");
     setIsEditDialogOpen(true);
+  };
+
+  const isUserPremium = (user: UserWithSubscription) =>
+    user.subscription?.status === "active" || user.subscription?.status === "trialing";
+
+  const togglePremiumAccess = async (user: UserWithSubscription) => {
+    setUpdatingSubscriptionId(user.id);
+    try {
+      const now = new Date();
+      const next = new Date();
+      next.setDate(next.getDate() + 30);
+
+      if (isUserPremium(user)) {
+        const { error } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "canceled",
+            cancel_at_period_end: true,
+            current_period_end: now.toISOString(),
+            updated_at: now.toISOString(),
+          })
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+
+        setUsers((prev) =>
+          prev.map((item) =>
+            item.id === user.id
+              ? {
+                  ...item,
+                  subscription: item.subscription
+                    ? {
+                        ...item.subscription,
+                        status: "canceled",
+                        current_period_end: now.toISOString(),
+                      }
+                    : undefined,
+                }
+              : item,
+          ),
+        );
+      } else {
+        const { error } = await supabase
+          .from("subscriptions")
+          .insert({
+            user_id: user.id,
+            status: "active",
+            cancel_at_period_end: false,
+            current_period_start: now.toISOString(),
+            current_period_end: next.toISOString(),
+            updated_at: now.toISOString(),
+          });
+
+        if (error) {
+          const updateError = await supabase
+            .from("subscriptions")
+            .update({
+              status: "active",
+              cancel_at_period_end: false,
+              current_period_start: now.toISOString(),
+              current_period_end: next.toISOString(),
+              updated_at: now.toISOString(),
+            })
+            .eq("user_id", user.id);
+
+          if (updateError.error) throw updateError.error;
+        }
+
+        setUsers((prev) =>
+          prev.map((item) =>
+            item.id === user.id
+              ? {
+                  ...item,
+                  subscription: {
+                    ...(item.subscription || {}),
+                    status: "active",
+                    current_period_start: now.toISOString(),
+                    current_period_end: next.toISOString(),
+                    trial_end: item.subscription?.trial_end || null,
+                    stripe_subscription_id: item.subscription?.stripe_subscription_id || null,
+                    stripe_customer_id: item.subscription?.stripe_customer_id || null,
+                  },
+                }
+              : item,
+          ),
+        );
+      }
+
+      toast({
+        title: "Atualizado",
+        description: isUserPremium(user)
+          ? "Acesso premium removido."
+          : "Acesso premium liberado.",
+      });
+    } catch (error: any) {
+      console.error("Error toggling subscription:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível atualizar a assinatura.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingSubscriptionId(null);
+    }
   };
 
   const getStatusBadge = (status?: string) => {
@@ -604,6 +710,15 @@ const AdminPanel = () => {
                                   onClick={() => openEditDialog(user)}
                                 >
                                   <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant={isUserPremium(user) ? "destructive" : "secondary"}
+                                  size="sm"
+                                  title={isUserPremium(user) ? "Remover premium" : "Liberar premium"}
+                                  onClick={() => togglePremiumAccess(user)}
+                                  disabled={updatingSubscriptionId === user.id}
+                                >
+                                  <Crown className="h-4 w-4" />
                                 </Button>
                               </div>
                             </TableCell>
