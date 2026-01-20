@@ -3,6 +3,9 @@ project_id = "zdegrjywuybymohxtfxy"
 [functions.send-email]
 verify_jwt = false
 
+[functions.dispatch-reminders]
+verify_jwt = false
+
 [functions.create-checkout-session]
 enabled = true
 verify_jwt = true

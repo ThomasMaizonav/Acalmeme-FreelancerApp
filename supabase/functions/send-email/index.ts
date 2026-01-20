@@ -2,7 +2,7 @@
 // Edge Function (Deno) para enviar e-mails via Resend, protegida por CRON_SECRET.
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "";
+const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "@#6713ProjetoAcalmeme&";
 
 type Payload = {
   to: string | string[];

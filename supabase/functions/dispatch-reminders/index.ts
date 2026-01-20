@@ -1,11 +1,5 @@
 // supabase/functions/dispatch-reminders/index.ts
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const CRON_SECRET = Deno.env.get("CRON_SECRET")!;
-
-const SEND_EMAIL_URL = `${SUPABASE_URL}/functions/v1/send-email`;
 const TZ = "America/Sao_Paulo";
 
 const json = (data: unknown, status = 200) =>
@@ -49,13 +43,18 @@ function getNowInTZ() {
   return { hhmm, dow, scheduled_for: scheduled_for.toISOString() };
 }
 
-async function supabaseFetch(path: string, init?: RequestInit) {
-  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+async function supabaseFetch(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  path: string,
+  init?: RequestInit,
+) {
+  const url = `${supabaseUrl}/rest/v1/${path}`;
   return await fetch(url, {
     ...init,
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
       "Content-Type": "application/json",
       ...(init?.headers ?? {}),
     },
@@ -65,13 +64,28 @@ async function supabaseFetch(path: string, init?: RequestInit) {
 serve(async (req) => {
   try {
     const auth = req.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${CRON_SECRET}`) {
+    const cronSecret = Deno.env.get("CRON_SECRET") ?? "@#6713ProjetoAcalmeme&";
+    const expected = `Bearer ${cronSecret}`;
+    if (!cronSecret) {
+      return json({ error: "missing CRON_SECRET env" }, 500);
+    }
+    if (auth !== expected) {
       return json({ error: "unauthorized" }, 401);
     }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!supabaseUrl || !serviceRoleKey) {
+      return json({ error: "missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" }, 500);
+    }
+
+    const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
 
     const { hhmm, dow, scheduled_for } = getNowInTZ();
 
     const remindersRes = await supabaseFetch(
+      supabaseUrl,
+      serviceRoleKey,
       `reminders?select=id,user_id,title,description,email,send_email,is_active,days_of_week,timezone,reminder_times(id,scheduled_time,is_active)` +
         `&is_active=eq.true&send_email=eq.true`,
     );
@@ -94,12 +108,13 @@ serve(async (req) => {
         skipped++;
         continue;
       }
-      if (!Array.isArray(r.days_of_week) || !r.days_of_week.includes(dow)) {
+      const dowStr = String(dow);
+      if (!Array.isArray(r.days_of_week) || !r.days_of_week.includes(dowStr)) {
         skipped++;
         continue;
       }
 
-      const times = (r.reminder_times ?? []).filter((t: any) => t.is_active);
+      const times = (r.reminder_times ?? []).filter((t: any) => t.is_active ?? true);
       for (const t of times) {
         const st = String(t.scheduled_time).slice(0, 5);
         if (st !== hhmm) continue;
@@ -116,7 +131,7 @@ serve(async (req) => {
           },
         ];
 
-        const logRes = await supabaseFetch(`reminder_logs`, {
+        const logRes = await supabaseFetch(supabaseUrl, serviceRoleKey, `reminder_logs`, {
           method: "POST",
           body: JSON.stringify(logPayload),
           headers: { Prefer: "return=representation" },
@@ -131,11 +146,11 @@ serve(async (req) => {
           return json({ error: "failed_to_write_log", details: body }, 500);
         }
 
-        const sendRes = await fetch(SEND_EMAIL_URL, {
+        const sendRes = await fetch(sendEmailUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${CRON_SECRET}`,
+            Authorization: `Bearer ${cronSecret}`,
           },
           body: JSON.stringify({
             to: r.email,
@@ -155,6 +170,8 @@ serve(async (req) => {
         if (!sendRes.ok) {
           const err = await sendRes.text();
           await supabaseFetch(
+            supabaseUrl,
+            serviceRoleKey,
             `reminder_logs?reminder_time_id=eq.${t.id}&scheduled_for=eq.${encodeURIComponent(scheduled_for)}`,
             {
               method: "PATCH",
@@ -165,6 +182,8 @@ serve(async (req) => {
         }
 
         await supabaseFetch(
+          supabaseUrl,
+          serviceRoleKey,
           `reminder_logs?reminder_time_id=eq.${t.id}&scheduled_for=eq.${encodeURIComponent(scheduled_for)}`,
           {
             method: "PATCH",
