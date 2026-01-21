@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Bell, Plus, Trash2, Edit, Mail, Pill, Droplets, Dumbbell } from "lucide-react";
+import { ArrowLeft, Bell, Plus, Trash2, Edit, Mail, Pill, Droplets, Dumbbell, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EditReminderDialog } from "@/components/EditReminderDialog";
 
@@ -57,6 +57,7 @@ const Reminders = () => {
   const [deleteReminderTarget, setDeleteReminderTarget] = useState<Reminder | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const [scheduledTimeouts, setScheduledTimeouts] = useState<number[]>([]);
+  const [timeDraft, setTimeDraft] = useState("08:00");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -69,6 +70,30 @@ const Reminders = () => {
 
   const normalizeDays = (days?: Array<number | string> | null) =>
     (days ?? []).map((day) => Number(day)).filter((value) => Number.isFinite(value));
+
+  const normalizeTimeValue = (value: string) => value.trim().slice(0, 5);
+
+  const toUniqueSortedTimes = (times: string[]) =>
+    Array.from(new Set(times.map(normalizeTimeValue).filter(Boolean))).sort();
+
+  const addTimeValue = (value: string) => {
+    const normalized = normalizeTimeValue(value);
+    if (!normalized) return;
+    setFormData(prev => ({
+      ...prev,
+      scheduled_times: toUniqueSortedTimes([...prev.scheduled_times, normalized]),
+    }));
+  };
+
+  const removeTimeValue = (value: string) => {
+    const normalized = normalizeTimeValue(value);
+    setFormData(prev => ({
+      ...prev,
+      scheduled_times: toUniqueSortedTimes(prev.scheduled_times).filter((time) => time !== normalized),
+    }));
+  };
+
+  const sortedTimes = toUniqueSortedTimes(formData.scheduled_times);
 
   useEffect(() => {
     checkAuth();
@@ -205,9 +230,7 @@ const Reminders = () => {
       return;
     }
 
-    const uniqueTimes = Array.from(
-      new Set(formData.scheduled_times.map(time => time.trim()).filter(Boolean))
-    );
+    const uniqueTimes = toUniqueSortedTimes(formData.scheduled_times);
 
     if (uniqueTimes.length === 0) {
       toast({
@@ -283,6 +306,7 @@ const Reminders = () => {
         days_of_week: [0, 1, 2, 3, 4, 5, 6],
         send_email: false,
       });
+      setTimeDraft("08:00");
       loadReminders();
     }
   };
@@ -342,28 +366,6 @@ const Reminders = () => {
     setFormData(prev => ({
       ...prev,
       days_of_week: days,
-    }));
-  };
-
-  const updateTime = (index: number, value: string) => {
-    setFormData(prev => {
-      const nextTimes = [...prev.scheduled_times];
-      nextTimes[index] = value;
-      return { ...prev, scheduled_times: nextTimes };
-    });
-  };
-
-  const addTime = () => {
-    setFormData(prev => ({
-      ...prev,
-      scheduled_times: [...prev.scheduled_times, "08:00"],
-    }));
-  };
-
-  const removeTime = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      scheduled_times: prev.scheduled_times.filter((_, i) => i !== index),
     }));
   };
 
@@ -512,59 +514,58 @@ const Reminders = () => {
 
                   <div>
                     <Label>Horários</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {[
-                        { label: "Manhã 08:00", value: "08:00" },
-                        { label: "Almoço 12:00", value: "12:00" },
-                        { label: "Tarde 16:00", value: "16:00" },
-                        { label: "Noite 20:00", value: "20:00" },
-                      ].map((preset) => (
-                        <Button
-                          key={preset.value}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              scheduled_times: prev.scheduled_times.includes(preset.value)
-                                ? prev.scheduled_times
-                                : [...prev.scheduled_times, preset.value],
-                            }))
-                          }
-                        >
-                          {preset.label}
-                        </Button>
-                      ))}
-                    </div>
-                    <div className="space-y-2 mt-2">
-                      {formData.scheduled_times.map((time, index) => (
-                        <div key={`${time}-${index}`} className="flex items-center gap-2">
-                          <Input
-                            type="time"
-                            value={time}
-                            onChange={(e) => updateTime(index, e.target.value)}
-                            required
-                          />
-                          {formData.scheduled_times.length > 1 && (
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground">Horários selecionados</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {sortedTimes.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">
+                            Nenhum horário selecionado.
+                          </span>
+                        ) : (
+                          sortedTimes.map((time) => (
                             <Button
+                              key={time}
                               type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeTime(index)}
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => removeTimeValue(time)}
+                              className="gap-1"
+                              aria-label={`Remover horário ${time}`}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {time}
+                              <X className="h-3 w-3" />
                             </Button>
-                          )}
-                        </div>
-                      ))}
-                      <Button type="button" variant="outline" size="sm" onClick={addTime}>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <div>
+                        <Label htmlFor="custom-time" className="text-xs text-muted-foreground">
+                          Adicionar horário personalizado
+                        </Label>
+                        <Input
+                          id="custom-time"
+                          type="time"
+                          value={timeDraft}
+                          onChange={(e) => setTimeDraft(e.target.value)}
+                          step={300}
+                          className="sm:max-w-[160px]"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => addTimeValue(timeDraft)}
+                      >
                         <Plus className="mr-2 h-4 w-4" />
                         Adicionar horário
                       </Button>
                     </div>
+
                     <p className="text-xs text-muted-foreground mt-2">
-                      Dica: use os botões rápidos para adicionar horários comuns.
+                      Toque em um horário para remover.
                     </p>
                   </div>
 
@@ -688,8 +689,8 @@ const Reminders = () => {
                                 {Array.from(
                                   new Set(
                                     reminder.reminder_times
-                                      ?.filter((time) => time.is_active)
-                                      .map((time) => time.scheduled_time)
+                                      ?.filter((time) => time.is_active ?? true)
+                                      .map((time) => time.scheduled_time.slice(0, 5))
                                   )
                                 )
                                   .sort()

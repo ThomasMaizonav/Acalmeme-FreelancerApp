@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2 } from "lucide-react";
+import { X } from "lucide-react";
 
 interface Reminder {
   id: string;
@@ -45,6 +45,31 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
     scheduled_times: reminder?.reminder_times?.map((time) => time.scheduled_time) || ["08:00"],
     days_of_week: reminder?.days_of_week || [0, 1, 2, 3, 4, 5, 6],
   });
+  const [timeDraft, setTimeDraft] = useState("08:00");
+
+  const normalizeTimeValue = (value: string) => value.trim().slice(0, 5);
+
+  const toUniqueSortedTimes = (times: string[]) =>
+    Array.from(new Set(times.map(normalizeTimeValue).filter(Boolean))).sort();
+
+  const addTimeValue = (value: string) => {
+    const normalized = normalizeTimeValue(value);
+    if (!normalized) return;
+    setFormData(prev => ({
+      ...prev,
+      scheduled_times: toUniqueSortedTimes([...prev.scheduled_times, normalized]),
+    }));
+  };
+
+  const removeTimeValue = (value: string) => {
+    const normalized = normalizeTimeValue(value);
+    setFormData(prev => ({
+      ...prev,
+      scheduled_times: toUniqueSortedTimes(prev.scheduled_times).filter((time) => time !== normalized),
+    }));
+  };
+
+  const sortedTimes = toUniqueSortedTimes(formData.scheduled_times);
 
   useEffect(() => {
     if (!reminder || !open) return;
@@ -52,17 +77,20 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       .map((day) => Number(day))
       .filter((value) => Number.isFinite(value));
 
+    const times =
+      reminder.reminder_times
+        ?.filter((time) => time.is_active ?? true)
+        .map((time) => time.scheduled_time.slice(0, 5)) || [];
+    const normalizedTimes = toUniqueSortedTimes(times);
+
     setFormData({
       title: reminder.title || "",
       description: reminder.description || "",
       reminder_type: reminder.reminder_type || "custom",
-      scheduled_times:
-        reminder.reminder_times
-          ?.filter((time) => time.is_active ?? true)
-          .map((time) => time.scheduled_time)
-          .sort() || ["08:00"],
+      scheduled_times: normalizedTimes.length ? normalizedTimes : ["08:00"],
       days_of_week: days.length ? days : [0, 1, 2, 3, 4, 5, 6],
     });
+    setTimeDraft(normalizedTimes[0] ?? "08:00");
   }, [reminder, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,9 +106,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       return;
     }
 
-    const uniqueTimes = Array.from(
-      new Set(formData.scheduled_times.map(time => time.trim()).filter(Boolean))
-    );
+    const uniqueTimes = toUniqueSortedTimes(formData.scheduled_times);
 
     if (uniqueTimes.length === 0) {
       toast({
@@ -153,28 +179,6 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
     }));
   };
 
-  const updateTime = (index: number, value: string) => {
-    setFormData(prev => {
-      const nextTimes = [...prev.scheduled_times];
-      nextTimes[index] = value;
-      return { ...prev, scheduled_times: nextTimes };
-    });
-  };
-
-  const addTime = () => {
-    setFormData(prev => ({
-      ...prev,
-      scheduled_times: [...prev.scheduled_times, "08:00"],
-    }));
-  };
-
-  const removeTime = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      scheduled_times: prev.scheduled_times.filter((_, i) => i !== index),
-    }));
-  };
-
   if (!reminder) return null;
 
   return (
@@ -225,28 +229,51 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
 
           <div>
             <Label>Horários</Label>
-            <div className="space-y-2 mt-2">
-              {formData.scheduled_times.map((time, index) => (
-                <div key={`time-${index}`} className="flex items-center gap-2">
-                  <Input
-                    type="time"
-                    value={time}
-                    onChange={(e) => updateTime(index, e.target.value)}
-                    required
-                  />
-                  {formData.scheduled_times.length > 1 && (
+            <div className="mt-3">
+              <p className="text-xs text-muted-foreground">Horários selecionados</p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {sortedTimes.length === 0 ? (
+                  <span className="text-xs text-muted-foreground">
+                    Nenhum horário selecionado.
+                  </span>
+                ) : (
+                  sortedTimes.map((time) => (
                     <Button
+                      key={time}
                       type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeTime(index)}
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => removeTimeValue(time)}
+                      className="gap-1"
+                      aria-label={`Remover horário ${time}`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {time}
+                      <X className="h-3 w-3" />
                     </Button>
-                  )}
-                </div>
-              ))}
-              <Button type="button" variant="outline" size="sm" onClick={addTime}>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div>
+                <Label htmlFor="edit-custom-time" className="text-xs text-muted-foreground">
+                  Adicionar horário personalizado
+                </Label>
+                <Input
+                  id="edit-custom-time"
+                  type="time"
+                  value={timeDraft}
+                  onChange={(e) => setTimeDraft(e.target.value)}
+                  step={300}
+                  className="sm:max-w-[160px]"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => addTimeValue(timeDraft)}
+              >
                 Adicionar horário
               </Button>
             </div>
