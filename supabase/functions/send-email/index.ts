@@ -2,7 +2,6 @@
 // Edge Function (Deno) para enviar e-mails via Resend, protegida por CRON_SECRET.
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "@#6713ProjetoAcalmeme&";
 
 type Payload = {
   to: string | string[];
@@ -21,6 +20,23 @@ function json(status: number, body: Record<string, unknown>) {
 }
 
 Deno.serve(async (req: Request) => {
+  const auth = req.headers.get("authorization") ?? "";
+  const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+
+  if (!cronSecret) {
+    return new Response(JSON.stringify({ error: "missing CRON_SECRET" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (auth !== `Bearer ${cronSecret}`) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   // Healthcheck simples
   if (req.method === "GET") {
     return json(200, { ok: true });
@@ -29,14 +45,6 @@ Deno.serve(async (req: Request) => {
   // Só aceita POST
   if (req.method !== "POST") {
     return json(405, { error: "Method not allowed" });
-  }
-
-  // Segurança: valida CRON_SECRET via Authorization: Bearer <secret>
-  const auth = req.headers.get("authorization") ?? "";
-  const token = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length) : "";
-
-  if (!CRON_SECRET || token !== CRON_SECRET) {
-    return json(401, { error: "unauthorized" });
   }
 
   if (!RESEND_API_KEY) {
