@@ -10,6 +10,10 @@ const json = (data: unknown, status = 200) =>
 
 function getNowInTZ() {
   const now = new Date();
+  const start = new Date(now);
+  start.setSeconds(0, 0);
+  const end = new Date(now);
+  end.setSeconds(59, 999);
 
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: TZ,
@@ -37,10 +41,13 @@ function getNowInTZ() {
   };
   const dow = map[p.weekday];
 
-  const scheduled_for = new Date();
-  scheduled_for.setSeconds(0, 0);
-
-  return { hhmm, dow, scheduled_for: scheduled_for.toISOString() };
+  return {
+    hhmm,
+    dow,
+    scheduled_for: start.toISOString(),
+    minute_start: start.toISOString(),
+    minute_end: end.toISOString(),
+  };
 }
 
 async function supabaseFetch(
@@ -81,7 +88,7 @@ serve(async (req) => {
 
     const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
 
-    const { hhmm, dow, scheduled_for } = getNowInTZ();
+    const { hhmm, dow, scheduled_for, minute_start, minute_end } = getNowInTZ();
 
     const remindersRes = await supabaseFetch(
       supabaseUrl,
@@ -172,7 +179,7 @@ serve(async (req) => {
           await supabaseFetch(
             supabaseUrl,
             serviceRoleKey,
-            `reminder_logs?reminder_time_id=eq.${t.id}&scheduled_for=eq.${encodeURIComponent(scheduled_for)}`,
+            `reminder_logs?reminder_time_id=eq.${t.id}&scheduled_for=gte.${encodeURIComponent(minute_start)}&scheduled_for=lte.${encodeURIComponent(minute_end)}`,
             {
               method: "PATCH",
               body: JSON.stringify({ status: "failed", error_message: err }),
@@ -184,7 +191,7 @@ serve(async (req) => {
         await supabaseFetch(
           supabaseUrl,
           serviceRoleKey,
-          `reminder_logs?reminder_time_id=eq.${t.id}&scheduled_for=eq.${encodeURIComponent(scheduled_for)}`,
+          `reminder_logs?reminder_time_id=eq.${t.id}&scheduled_for=gte.${encodeURIComponent(minute_start)}&scheduled_for=lte.${encodeURIComponent(minute_end)}`,
           {
             method: "PATCH",
             body: JSON.stringify({ status: "sent" }),
