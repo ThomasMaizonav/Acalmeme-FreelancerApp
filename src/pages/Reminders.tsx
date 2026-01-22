@@ -63,7 +63,7 @@ const Reminders = () => {
     title: "",
     description: "",
     reminder_type: "custom",
-    scheduled_times: ["08:00"],
+    scheduled_times: [],
     days_of_week: [0, 1, 2, 3, 4, 5, 6],
     send_email: false,
   });
@@ -231,8 +231,17 @@ const Reminders = () => {
     }
 
     const uniqueTimes = toUniqueSortedTimes(formData.scheduled_times);
+    const draftTime = normalizeTimeValue(timeDraft);
+    const resolvedTimes =
+      uniqueTimes.length === 0
+        ? draftTime
+          ? [draftTime]
+          : []
+        : uniqueTimes.length === 1 && draftTime && !uniqueTimes.includes(draftTime)
+          ? [draftTime]
+          : uniqueTimes;
 
-    if (uniqueTimes.length === 0) {
+    if (resolvedTimes.length === 0) {
       toast({
         title: "Defina pelo menos um horário",
         description: "Adicione um horário para salvar o lembrete.",
@@ -274,7 +283,7 @@ const Reminders = () => {
       return;
     }
 
-    const timesPayload = uniqueTimes.map(time => ({
+    const timesPayload = resolvedTimes.map(time => ({
       reminder_id: reminder.id,
       scheduled_time: time,
       is_active: true,
@@ -302,7 +311,7 @@ const Reminders = () => {
         title: "",
         description: "",
         reminder_type: "custom",
-        scheduled_times: ["08:00"],
+        scheduled_times: [],
         days_of_week: [0, 1, 2, 3, 4, 5, 6],
         send_email: false,
       });
@@ -549,19 +558,23 @@ const Reminders = () => {
                           id="custom-time"
                           type="time"
                           value={timeDraft}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setTimeDraft(value);
-                            addTimeValue(value);
-                          }}
+                          onChange={(e) => setTimeDraft(e.target.value)}
                           step={300}
                           className="sm:max-w-[160px]"
                         />
                       </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => addTimeValue(timeDraft)}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Adicionar horário
+                      </Button>
                     </div>
 
                     <p className="text-xs text-muted-foreground mt-2">
-                      Toque em um horário para remover. O horário escolhido entra automaticamente.
+                      Para um único horário, basta escolher acima e salvar.
                     </p>
                   </div>
 

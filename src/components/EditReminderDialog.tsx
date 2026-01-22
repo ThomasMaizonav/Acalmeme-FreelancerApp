@@ -42,7 +42,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
     title: reminder?.title || "",
     description: reminder?.description || "",
     reminder_type: reminder?.reminder_type || "custom",
-    scheduled_times: reminder?.reminder_times?.map((time) => time.scheduled_time) || ["08:00"],
+    scheduled_times: reminder?.reminder_times?.map((time) => time.scheduled_time) || [],
     days_of_week: reminder?.days_of_week || [0, 1, 2, 3, 4, 5, 6],
   });
   const [timeDraft, setTimeDraft] = useState("08:00");
@@ -87,7 +87,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       title: reminder.title || "",
       description: reminder.description || "",
       reminder_type: reminder.reminder_type || "custom",
-      scheduled_times: normalizedTimes.length ? normalizedTimes : ["08:00"],
+      scheduled_times: normalizedTimes,
       days_of_week: days.length ? days : [0, 1, 2, 3, 4, 5, 6],
     });
     setTimeDraft(normalizedTimes[0] ?? "08:00");
@@ -107,8 +107,17 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
     }
 
     const uniqueTimes = toUniqueSortedTimes(formData.scheduled_times);
+    const draftTime = normalizeTimeValue(timeDraft);
+    const resolvedTimes =
+      uniqueTimes.length === 0
+        ? draftTime
+          ? [draftTime]
+          : []
+        : uniqueTimes.length === 1 && draftTime && !uniqueTimes.includes(draftTime)
+          ? [draftTime]
+          : uniqueTimes;
 
-    if (uniqueTimes.length === 0) {
+    if (resolvedTimes.length === 0) {
       toast({
         title: "Defina pelo menos um horário",
         description: "Adicione um horário para salvar o lembrete.",
@@ -145,8 +154,8 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
 
       const { error: timesError } = await supabase
         .from("reminder_times")
-        .insert(
-          uniqueTimes.map((time) => ({
+      .insert(
+          resolvedTimes.map((time) => ({
             reminder_id: reminder.id,
             scheduled_time: time,
             is_active: true,
@@ -264,15 +273,18 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
                   id="edit-custom-time"
                   type="time"
                   value={timeDraft}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setTimeDraft(value);
-                    addTimeValue(value);
-                  }}
+                  onChange={(e) => setTimeDraft(e.target.value)}
                   step={300}
                   className="sm:max-w-[160px]"
                 />
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => addTimeValue(timeDraft)}
+              >
+                Adicionar horário
+              </Button>
             </div>
           </div>
 
