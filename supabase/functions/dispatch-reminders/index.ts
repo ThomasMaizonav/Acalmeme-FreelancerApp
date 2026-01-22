@@ -71,7 +71,7 @@ async function supabaseFetch(
 serve(async (req) => {
   try {
     const auth = req.headers.get("authorization") ?? "";
-    const cronSecret = Deno.env.get("CRON_SECRET") ?? "@#6713ProjetoAcalmeme&";
+    const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
     const expected = `Bearer ${cronSecret}`;
     if (!cronSecret) {
       return json({ error: "missing CRON_SECRET env" }, 500);
@@ -115,8 +115,9 @@ serve(async (req) => {
         skipped++;
         continue;
       }
-      const dowStr = String(dow);
-      if (!Array.isArray(r.days_of_week) || !r.days_of_week.includes(dowStr)) {
+      const allowed = Array.isArray(r.days_of_week) ? r.days_of_week : [];
+      const allowedNums = allowed.map((value: unknown) => Number(value)).filter(Number.isFinite);
+      if (!allowedNums.includes(dow)) {
         skipped++;
         continue;
       }
