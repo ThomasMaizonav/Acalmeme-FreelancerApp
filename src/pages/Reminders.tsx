@@ -549,23 +549,19 @@ const Reminders = () => {
                           id="custom-time"
                           type="time"
                           value={timeDraft}
-                          onChange={(e) => setTimeDraft(e.target.value)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setTimeDraft(value);
+                            addTimeValue(value);
+                          }}
                           step={300}
                           className="sm:max-w-[160px]"
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => addTimeValue(timeDraft)}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Adicionar horário
-                      </Button>
                     </div>
 
                     <p className="text-xs text-muted-foreground mt-2">
-                      Toque em um horário para remover.
+                      Toque em um horário para remover. O horário escolhido entra automaticamente.
                     </p>
                   </div>
 

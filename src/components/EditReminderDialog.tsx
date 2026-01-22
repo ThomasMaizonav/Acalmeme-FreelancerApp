@@ -264,18 +264,15 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
                   id="edit-custom-time"
                   type="time"
                   value={timeDraft}
-                  onChange={(e) => setTimeDraft(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setTimeDraft(value);
+                    addTimeValue(value);
+                  }}
                   step={300}
                   className="sm:max-w-[160px]"
                 />
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => addTimeValue(timeDraft)}
-              >
-                Adicionar horário
-              </Button>
             </div>
           </div>
 
