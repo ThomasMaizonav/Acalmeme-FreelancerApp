@@ -147,7 +147,7 @@ const AdminPanel = () => {
         s => s.status === 'trialing'
       ).length;
 
-      const mrr = activeSubscriptions * 27.90;
+      const mrr = activeSubscriptions * 9.90;
 
       const oldestSub = subscriptionsData
         .filter(s => s.current_period_start)
@@ -783,7 +783,7 @@ const AdminPanel = () => {
                                   : '-'}
                               </TableCell>
                               <TableCell className="text-sm font-semibold">
-                                {user.subscription?.status === 'active' ? 'R$ 27,90' : '-'}
+                                {user.subscription?.status === 'active' ? 'R$ 9,90' : '-'}
                               </TableCell>
                               <TableCell className="text-xs font-mono max-w-[150px] truncate">
                                 {user.subscription?.stripe_customer_id || '-'}

@@ -180,7 +180,7 @@ const Plans = () => {
               </CardTitle>
               <CardDescription>Acesso completo a tudo</CardDescription>
               <div className="mt-4">
-                <span className="text-4xl font-bold">R$ 27,90</span>
+                <span className="text-4xl font-bold">R$ 9,90</span>
                 <span className="text-muted-foreground">/mês</span>
               </div>
             </CardHeader>

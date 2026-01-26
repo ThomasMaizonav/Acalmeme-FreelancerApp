@@ -83,7 +83,7 @@ const Landing = () => {
       id: "2",
       question: "Quanto custa? Tem período de teste?",
       answer:
-        "Você pode usar o AcalmeMe gratuitamente por 30 dias completos, sem precisar colocar cartão de crédito. Depois do período de teste, o plano custa apenas R$ 27,90/mês. Cancele quando quiser.",
+        "Você pode usar o AcalmeMe gratuitamente por 30 dias completos, sem precisar colocar cartão de crédito. Depois do período de teste, o plano custa apenas R$ 9,90/mês. Cancele quando quiser.",
     },
     {
       id: "3",
@@ -526,7 +526,7 @@ const Landing = () => {
               Comece hoje mesmo, é grátis!
             </h2>
             <p className="text-white/90 mb-8 max-w-lg mx-auto">
-              30 dias para testar tudo sem compromisso. Depois, apenas R$ 27,90/mês.
+              30 dias para testar tudo sem compromisso. Depois, apenas R$ 9,90/mês.
               Cancele quando quiser.
             </p>
             <Button
