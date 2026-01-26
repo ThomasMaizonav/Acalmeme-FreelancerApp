@@ -36,6 +36,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const priceId: string = body.priceId || DEFAULT_PRICE_ID;
+    const userId: string = body.userId || "";
+    const email: string = body.email || "";
 
     const successUrl: string =
       body.successUrl || "https://acalmeme.vercel.app/success";
@@ -50,15 +52,24 @@ Deno.serve(async (req) => {
       apiVersion: "2024-06-20",
     });
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      // opcional:
-      // allow_promotion_codes: true,
-      // customer_email: body.email,
-    });
+    };
+
+    if (email) {
+      sessionParams.customer_email = email;
+    }
+
+    if (userId) {
+      sessionParams.client_reference_id = userId;
+      sessionParams.metadata = { user_id: userId };
+      sessionParams.subscription_data = { metadata: { user_id: userId } };
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return json({ url: session.url, id: session.id });
   } catch (err) {

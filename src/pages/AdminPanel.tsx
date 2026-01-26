@@ -78,6 +78,7 @@ const AdminPanel = () => {
   });
 
   useEffect(() => {
+    console.log("Supabase URL:", supabase.supabaseUrl);
     checkAdminAccess();
   }, []);
 
@@ -197,7 +198,7 @@ const AdminPanel = () => {
     try {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id,user_id,email,full_name,phone,cpf,created_at,free_trial_started_at,free_trial_used')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -206,10 +207,16 @@ const AdminPanel = () => {
         .from('subscriptions')
         .select('*');
 
-      const usersWithSubs = profilesData.map(profile => {
-        const subscription = subscriptionsData?.find(sub => sub.user_id === profile.id);
+      const usersWithSubs = profilesData.map((profile: any) => {
+        const authUserId = profile.user_id ?? profile.id;
+
+        const subscription = subscriptionsData?.find(
+          (sub: any) => sub.user_id === authUserId
+        );
+
         return {
           ...profile,
+          id: authUserId, // <-- IMPORTANTÍSSIMO: id vira o user_id do auth
           subscription: subscription || undefined,
         };
       });

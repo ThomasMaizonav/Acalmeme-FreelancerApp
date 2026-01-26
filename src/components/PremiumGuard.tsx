@@ -34,7 +34,7 @@ export const PremiumGuard = ({ children, feature = "este recurso" }: PremiumGuar
           <p className="text-sm sm:text-base text-muted-foreground mb-6 px-2">
             {isInFreeTrial 
               ? `Seu trial grátis acabou. Assine para continuar usando ${feature}!`
-              : `Você precisa do plano Premium para acessar ${feature}. Desbloqueie acesso ilimitado com 14 dias grátis!`
+              : `Você precisa do plano Premium para acessar ${feature}. Desbloqueie acesso ilimitado com 30 dias grátis!`
             }
           </p>
           <div className="space-y-4">
@@ -63,7 +63,7 @@ export const PremiumGuard = ({ children, feature = "este recurso" }: PremiumGuar
               onClick={() => navigate("/plans")}
             >
               <Crown className="w-5 h-5 mr-2" />
-              {isInFreeTrial ? "Assinar Agora" : "Começar 14 Dias Grátis"}
+              {isInFreeTrial ? "Assinar Agora" : "Começar 30 Dias Grátis"}
             </Button>
             <Button
               variant="outline"

@@ -172,6 +172,7 @@ const Auth = () => {
         const redirectUrl =
           import.meta.env.VITE_SUPABASE_OAUTH_REDIRECT_URL ||
           `${window.location.origin}/auth`;
+        const normalizedCpf = formData.cpf.replace(/\D/g, "");
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -179,13 +180,20 @@ const Auth = () => {
             data: { 
               full_name: formData.name,
               phone: formData.phone,
-              cpf: formData.cpf.replace(/\D/g, ""),
             },
             emailRedirectTo: redirectUrl
           },
         });
         if (error) throw error;
         if (data.user) {
+          const { error: cpfError } = await supabase
+            .from("profiles")
+            .update({ cpf: normalizedCpf } as any)
+            .eq("user_id", data.user.id);
+
+          if (cpfError) {
+            console.warn("Unable to update CPF in profiles:", cpfError);
+          }
           await logAuthEvent(data.user.id, 'signup');
           toast({
             title: "Conta criada com sucesso!",

@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PremiumGuard } from "@/components/PremiumGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -38,19 +39,61 @@ const App = () => (
         >
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/crisis" element={<Crisis />} />
-            <Route path="/calm-sessions" element={<CalmSession />} />
+            <Route
+              path="/crisis"
+              element={
+                <PremiumGuard feature="o acesso ao app">
+                  <Crisis />
+                </PremiumGuard>
+              }
+            />
+            <Route
+              path="/calm-sessions"
+              element={
+                <PremiumGuard feature="o acesso ao app">
+                  <CalmSession />
+                </PremiumGuard>
+              }
+            />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin-login" element={<AdminLogin />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/journal" element={<JournalNew />} />
+            <Route
+              path="/dashboard"
+              element={
+                <PremiumGuard feature="o acesso ao app">
+                  <Dashboard />
+                </PremiumGuard>
+              }
+            />
+            <Route
+              path="/journal"
+              element={
+                <PremiumGuard feature="o acesso ao app">
+                  <JournalNew />
+                </PremiumGuard>
+              }
+            />
             <Route path="/admin" element={<Admin />} />
-            <Route path="/reminders" element={<Reminders />} />
+            <Route
+              path="/reminders"
+              element={
+                <PremiumGuard feature="o acesso ao app">
+                  <Reminders />
+                </PremiumGuard>
+              }
+            />
             <Route path="/plans" element={<Plans />} />
             <Route path="/admin-panel" element={<AdminPanel />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/stripe-setup" element={<StripeSetup />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route
+              path="/settings"
+              element={
+                <PremiumGuard feature="o acesso ao app">
+                  <Settings />
+                </PremiumGuard>
+              }
+            />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

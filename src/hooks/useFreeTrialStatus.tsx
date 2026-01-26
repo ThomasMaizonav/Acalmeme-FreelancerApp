@@ -39,6 +39,88 @@ export const useFreeTrialStatus = () => {
 
   const getSaoPauloNow = () => partsToDate(toParts(new Date()));
 
+  const profileSelect = "id,user_id,free_trial_started_at,free_trial_used";
+
+  const fetchProfile = async (userId: string) => {
+    const { data: byUserId, error: userIdError } = await supabase
+      .from("profiles")
+      .select(profileSelect)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (byUserId) {
+      return { profile: byUserId, key: "user_id" as const };
+    }
+
+    if (userIdError) {
+      console.warn("Error loading profile by user_id:", userIdError);
+    }
+
+    const { data: byId, error: idError } = await supabase
+      .from("profiles")
+      .select(profileSelect)
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (byId) {
+      return { profile: byId, key: "id" as const };
+    }
+
+    if (idError) {
+      console.warn("Error loading profile by id:", idError);
+    }
+
+    return { profile: null, key: "user_id" as const };
+  };
+
+  const upsertProfile = async (
+    userId: string,
+    key: "user_id" | "id",
+    values: Record<string, unknown>,
+  ) => {
+    const payload = { ...values, [key]: userId } as Record<string, unknown>;
+    const { error } = await supabase
+      .from("profiles")
+      .upsert(payload as any);
+
+    if (!error) return;
+
+    if (key === "user_id") {
+      const fallbackPayload = { ...values, id: userId } as Record<string, unknown>;
+      const { error: fallbackError } = await supabase
+        .from("profiles")
+        .upsert(fallbackPayload as any);
+      if (fallbackError) throw fallbackError;
+      return;
+    }
+
+    throw error;
+  };
+
+  const updateProfile = async (
+    userId: string,
+    key: "user_id" | "id",
+    values: Record<string, unknown>,
+  ) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update(values as any)
+      .eq(key, userId);
+
+    if (!error) return;
+
+    if (key === "user_id") {
+      const { error: fallbackError } = await supabase
+        .from("profiles")
+        .update(values as any)
+        .eq("id", userId);
+      if (fallbackError) throw fallbackError;
+      return;
+    }
+
+    throw error;
+  };
+
   useEffect(() => {
     let timeoutId: number | null = null;
     let canceled = false;
@@ -112,31 +194,20 @@ export const useFreeTrialStatus = () => {
         return;
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("free_trial_started_at, free_trial_used")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { profile, key } = await fetchProfile(user.id);
 
       if (!profile || (!profile.free_trial_used && !profile.free_trial_started_at)) {
         const startedAt = new Date().toISOString();
 
         if (!profile) {
-          await supabase
-            .from("profiles")
-            .upsert({
-              id: user.id,
-              free_trial_started_at: startedAt,
-              free_trial_used: false,
-            });
+          await upsertProfile(user.id, key, {
+            free_trial_started_at: startedAt,
+            free_trial_used: false,
+          });
         } else {
-          await supabase
-            .from("profiles")
-            .update({
-              free_trial_started_at: startedAt,
-            })
-            .eq("id", user.id)
-            .is("free_trial_started_at", null);
+          await updateProfile(user.id, key, {
+            free_trial_started_at: startedAt,
+          });
         }
 
         setIsInFreeTrial(true);
@@ -173,10 +244,7 @@ export const useFreeTrialStatus = () => {
           setFreeTrialDaysLeft(0);
 
           // Mark free trial as used
-          await supabase
-            .from("profiles")
-            .update({ free_trial_used: true })
-            .eq("id", user.id);
+          await updateProfile(user.id, key, { free_trial_used: true });
         }
       } else {
         setIsInFreeTrial(false);
