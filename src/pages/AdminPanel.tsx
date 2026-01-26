@@ -15,6 +15,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface UserWithSubscription {
   id: string;
+  user_id: string;
   email: string;
   full_name: string;
   created_at: string;
@@ -216,6 +217,7 @@ const AdminPanel = () => {
 
         return {
           ...profile,
+          user_id: authUserId,
           id: authUserId, // <-- IMPORTANTÍSSIMO: id vira o user_id do auth
           subscription: subscription || undefined,
         };
@@ -346,7 +348,8 @@ const AdminPanel = () => {
     user.subscription?.status === "active" || user.subscription?.status === "trialing";
 
   const togglePremiumAccess = async (user: UserWithSubscription) => {
-    setUpdatingSubscriptionId(user.id);
+    const uid = user.user_id;
+    setUpdatingSubscriptionId(uid);
     try {
       const now = new Date();
       const next = new Date();
@@ -361,13 +364,13 @@ const AdminPanel = () => {
             current_period_end: now.toISOString(),
             updated_at: now.toISOString(),
           })
-          .eq("user_id", user.id);
+          .eq("user_id", uid);
 
         if (error) throw error;
 
         setUsers((prev) =>
           prev.map((item) =>
-            item.id === user.id
+            item.user_id === uid
               ? {
                   ...item,
                   subscription: item.subscription
@@ -385,7 +388,7 @@ const AdminPanel = () => {
         const { error } = await supabase
           .from("subscriptions")
           .insert({
-            user_id: user.id,
+            user_id: uid,
             status: "active",
             cancel_at_period_end: false,
             current_period_start: now.toISOString(),
@@ -403,14 +406,14 @@ const AdminPanel = () => {
               current_period_end: next.toISOString(),
               updated_at: now.toISOString(),
             })
-            .eq("user_id", user.id);
+            .eq("user_id", uid);
 
           if (updateError.error) throw updateError.error;
         }
 
         setUsers((prev) =>
           prev.map((item) =>
-            item.id === user.id
+            item.user_id === uid
               ? {
                   ...item,
                   subscription: {
@@ -723,7 +726,7 @@ const AdminPanel = () => {
                                   size="sm"
                                   title={isUserPremium(user) ? "Remover premium" : "Liberar premium"}
                                   onClick={() => togglePremiumAccess(user)}
-                                  disabled={updatingSubscriptionId === user.id}
+                                  disabled={updatingSubscriptionId === user.user_id}
                                 >
                                   <Crown className="h-4 w-4" />
                                 </Button>
