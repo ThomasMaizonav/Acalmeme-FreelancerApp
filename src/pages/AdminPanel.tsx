@@ -348,7 +348,7 @@ const AdminPanel = () => {
     user.subscription?.status === "active" || user.subscription?.status === "trialing";
 
   const togglePremiumAccess = async (user: UserWithSubscription) => {
-    const uid = user.user_id;
+    const uid = user.user_id || user.id;
     setUpdatingSubscriptionId(uid);
     try {
       const now = new Date();
@@ -387,33 +387,23 @@ const AdminPanel = () => {
       } else {
         const { error } = await supabase
           .from("subscriptions")
-          .insert({
-            user_id: uid,
-            status: "active",
-            cancel_at_period_end: false,
-            current_period_start: now.toISOString(),
-            current_period_end: next.toISOString(),
-            updated_at: now.toISOString(),
-          });
-
-        if (error) {
-          const updateError = await supabase
-            .from("subscriptions")
-            .update({
+          .upsert(
+            {
+              user_id: uid,
               status: "active",
               cancel_at_period_end: false,
               current_period_start: now.toISOString(),
               current_period_end: next.toISOString(),
               updated_at: now.toISOString(),
-            })
-            .eq("user_id", uid);
+            },
+            { onConflict: "user_id" },
+          );
 
-          if (updateError.error) throw updateError.error;
-        }
+        if (error) throw error;
 
         setUsers((prev) =>
           prev.map((item) =>
-            item.user_id === uid
+            (item.user_id || item.id) === uid
               ? {
                   ...item,
                   subscription: {
