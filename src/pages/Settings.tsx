@@ -363,8 +363,15 @@ const Settings = () => {
                     Precisa de ajuda? Entre em contato conosco:
                   </p>
                   <div className="flex items-center gap-2 text-primary font-medium">
-                    <span>📞</span>
-                    <span>(11) 99999-9999</span>
+                    <span>💬</span>
+                    <a
+                      href="https://wa.me/5511956816450?text=Gostaria%20de%20conversar%20sobre%20o%20App%20AcalmeMe"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline"
+                    >
+                      WhatsApp: +55 11 95681-6450
+                    </a>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Atendimento de segunda a sexta, das 9h às 18h
