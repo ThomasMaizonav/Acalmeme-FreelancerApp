@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Bell, Plus, Trash2, Edit, Mail, Pill, Droplets, Dumbbell, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EditReminderDialog } from "@/components/EditReminderDialog";
+import { useUserProgress } from "@/hooks/useUserProgress";
 
 interface ReminderTime {
   id: string;
@@ -50,6 +51,7 @@ const BRAZIL_TIMEZONE_LABEL = "Horário de Brasília (America/Sao_Paulo)";
 const Reminders = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { updateProgress } = useUserProgress();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
@@ -100,6 +102,10 @@ const Reminders = () => {
     loadReminders();
     checkNotificationPermission();
   }, []);
+
+  useEffect(() => {
+    updateProgress();
+  }, [updateProgress]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();

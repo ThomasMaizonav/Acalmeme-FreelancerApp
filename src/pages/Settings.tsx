@@ -19,6 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProgress } from "@/hooks/useUserProgress";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +35,7 @@ import {
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { updateProgress } = useUserProgress();
   
   // Profile state
   const [fullName, setFullName] = useState("");
@@ -51,6 +53,10 @@ const Settings = () => {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  useEffect(() => {
+    updateProgress();
+  }, [updateProgress]);
 
   const loadUserData = async () => {
     try {

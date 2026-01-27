@@ -15,16 +15,23 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { progress, isLoading } = useUserProgress();
+  const { progress, isLoading, updateProgress } = useUserProgress();
   const { isPremium } = useSubscription();
   const { isInFreeTrial, freeTrialDaysLeft } = useFreeTrialStatus();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [progressUpdated, setProgressUpdated] = useState(false);
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
     checkAdminStatus();
     loadUserName();
   }, []);
+
+  useEffect(() => {
+    if (progressUpdated) return;
+    updateProgress();
+    setProgressUpdated(true);
+  }, [progressUpdated, updateProgress]);
 
   const checkAdminStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();

@@ -57,14 +57,7 @@ const App = () => (
             />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin-login" element={<AdminLogin />} />
-            <Route
-              path="/dashboard"
-              element={
-                <PremiumGuard feature="o acesso ao app">
-                  <Dashboard />
-                </PremiumGuard>
-              }
-            />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route
               path="/journal"
               element={

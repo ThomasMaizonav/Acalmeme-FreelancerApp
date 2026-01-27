@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Volume2, VolumeX, Play, Pause, Clock } from "lucide-react";
+import { useUserProgress } from "@/hooks/useUserProgress";
 
 const DURATIONS = [
   { label: "1 min", seconds: 60 },
@@ -16,6 +17,7 @@ const RELAXING_MUSIC_URL =
 
 const CalmSession = () => {
   const navigate = useNavigate();
+  const { updateProgress } = useUserProgress();
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -35,6 +37,10 @@ const CalmSession = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    updateProgress();
+  }, [updateProgress]);
 
   useEffect(() => {
     if (soundEnabled && sessionStarted && !isPaused && audioRef.current) {
