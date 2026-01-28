@@ -70,14 +70,23 @@ async function supabaseFetch(
 
 serve(async (req) => {
   try {
-    const auth = req.headers.get("authorization") ?? "";
-    const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
-    const expected = `Bearer ${cronSecret}`;
+    const auth = req.headers.get("authorization") || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+
+    const cronSecret = (Deno.env.get("CRON_SECRET") || "").trim();
+
+    console.log("[dispatch] CRON_SECRET len:", cronSecret.length);
+    console.log("[dispatch] CRON_SECRET value:", cronSecret);
+
     if (!cronSecret) {
       return json({ error: "missing CRON_SECRET env" }, 500);
     }
-    if (auth !== expected) {
-      return json({ error: "unauthorized" }, 401);
+
+    if (token !== cronSecret) {
+      return json(
+        { error: "unauthorized", received: token.length, expected: cronSecret.length },
+        401,
+      );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
