@@ -44,7 +44,7 @@ const StripeSetup = () => {
               <ol className="list-decimal list-inside space-y-2">
                 <li>No produto criado, clique em "Adicionar preço"</li>
                 <li>Modelo de preço: "Recorrente"</li>
-                <li>Valor: R$ 29,90</li>
+                <li>Valor: R$ 9,90</li>
                 <li>Frequência de cobrança: Mensal</li>
                 <li>Clique em "Salvar preço"</li>
                 <li>Copie o ID do preço (começa com "price_")</li>
