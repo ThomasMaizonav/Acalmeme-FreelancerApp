@@ -270,7 +270,7 @@ serve(async (req) => {
           `reminder_logs?reminder_time_id=eq.${t.id}&scheduled_for=gte.${encodeURIComponent(minute_start)}&scheduled_for=lte.${encodeURIComponent(minute_end)}`,
           {
             method: "PATCH",
-            body: JSON.stringify({ status: "sent" }),
+            body: JSON.stringify({ status: "sent", sent_at: new Date().toISOString() }),
           },
         );
 

@@ -189,7 +189,7 @@ export type Database = {
           reminder_time_id: string | null
           scheduled_for: string | null
           scheduled_time: string
-          sent_at: string
+          sent_at: string | null
           status: string
           user_id: string | null
         }
@@ -202,7 +202,7 @@ export type Database = {
           reminder_time_id?: string | null
           scheduled_for?: string | null
           scheduled_time: string
-          sent_at: string
+          sent_at?: string | null
           status: string
           user_id?: string | null
         }
@@ -215,7 +215,7 @@ export type Database = {
           reminder_time_id?: string | null
           scheduled_for?: string | null
           scheduled_time?: string
-          sent_at?: string
+          sent_at?: string | null
           status?: string
           user_id?: string | null
         }
