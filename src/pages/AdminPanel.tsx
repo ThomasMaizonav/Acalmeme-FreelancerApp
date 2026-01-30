@@ -19,7 +19,6 @@ interface UserWithSubscription {
   email: string;
   full_name: string;
   created_at: string;
-  cpf?: string;
   phone?: string;
   free_trial_started_at?: string;
   free_trial_used?: boolean;
@@ -89,7 +88,6 @@ const AdminPanel = () => {
         (user) =>
           user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.cpf?.includes(searchTerm) ||
           user.phone?.includes(searchTerm)
       );
       setFilteredUsers(filtered);
@@ -199,7 +197,7 @@ const AdminPanel = () => {
     try {
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id,user_id,email,full_name,phone,cpf,created_at,free_trial_started_at,free_trial_used')
+        .select('id,user_id,email,full_name,phone,created_at,free_trial_started_at,free_trial_used')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
@@ -610,7 +608,7 @@ const AdminPanel = () => {
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome, email, CPF ou telefone..."
+              placeholder="Buscar por nome, email ou telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -644,7 +642,6 @@ const AdminPanel = () => {
                           <TableHead>Nome</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Telefone</TableHead>
-                          <TableHead>CPF</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Vencimento</TableHead>
                           <TableHead>Ações</TableHead>
@@ -658,7 +655,6 @@ const AdminPanel = () => {
                             </TableCell>
                             <TableCell className="text-sm">{user.email}</TableCell>
                             <TableCell className="text-sm">{user.phone || '-'}</TableCell>
-                            <TableCell className="text-sm">{user.cpf || '-'}</TableCell>
                             <TableCell>
                               {getTrialStatus(user)}
                             </TableCell>
@@ -904,10 +900,6 @@ const AdminPanel = () => {
                   <div>
                     <Label className="text-sm text-muted-foreground">Telefone</Label>
                     <p className="font-medium">{selectedUser.phone || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-muted-foreground">CPF</Label>
-                    <p className="font-medium">{selectedUser.cpf || 'N/A'}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Cadastrado em</Label>

@@ -50,6 +50,72 @@ function getNowInTZ() {
   };
 }
 
+const normalizeScheduledTime = (value: unknown) => {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (
+      trimmed.length >= 16 &&
+      (trimmed.includes("T") || trimmed.includes("-") || trimmed.includes("/"))
+    ) {
+      const parsed = new Date(trimmed);
+      if (!Number.isNaN(parsed.getTime())) {
+        return new Intl.DateTimeFormat("en-GB", {
+          timeZone: TZ,
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(parsed);
+      }
+    }
+    return trimmed.slice(0, 5);
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: TZ,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(value);
+  }
+
+  return "";
+};
+
+const normalizeScheduledTime = (value: unknown) => {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (
+      trimmed.length >= 16 &&
+      (trimmed.includes("T") || trimmed.includes("-") || trimmed.includes("/"))
+    ) {
+      const parsed = new Date(trimmed);
+      if (!Number.isNaN(parsed.getTime())) {
+        return new Intl.DateTimeFormat("en-GB", {
+          timeZone: TZ,
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(parsed);
+      }
+    }
+    return trimmed.slice(0, 5);
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: TZ,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(value);
+  }
+
+  return "";
+};
+
 async function supabaseFetch(
   supabaseUrl: string,
   serviceRoleKey: string,
@@ -76,7 +142,6 @@ serve(async (req) => {
     const cronSecret = (Deno.env.get("CRON_SECRET") || "").trim();
 
     console.log("[dispatch] CRON_SECRET len:", cronSecret.length);
-    console.log("[dispatch] CRON_SECRET value:", cronSecret);
 
     if (!cronSecret) {
       return json({ error: "missing CRON_SECRET env" }, 500);
@@ -133,7 +198,8 @@ serve(async (req) => {
 
       const times = (r.reminder_times ?? []).filter((t: any) => t.is_active ?? true);
       for (const t of times) {
-        const st = String(t.scheduled_time).slice(0, 5);
+        const st = normalizeScheduledTime(t.scheduled_time);
+        if (!st) continue;
         if (st !== hhmm) continue;
 
         const logPayload = [

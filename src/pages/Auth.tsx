@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft, CreditCard } from "lucide-react";
+import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +41,6 @@ const Auth = () => {
     name: "",
     email: "",
     phone: "",
-    cpf: "",
     password: "",
     confirmPassword: "",
   });
@@ -95,14 +94,6 @@ const Auth = () => {
     };
   }, [location.search]);
 
-  const formatCPF = (value: string) => {
-    const numbers = value.replace(/\D/g, "").slice(0, 11);
-    return numbers
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-  };
-
   const formatPhone = (value: string) => {
     const numbers = value.replace(/\D/g, "").slice(0, 11);
     if (numbers.length <= 10) {
@@ -137,15 +128,6 @@ const Auth = () => {
         return;
       }
 
-      if (!formData.cpf || formData.cpf.replace(/\D/g, "").length !== 11) {
-        toast({
-          title: "CPF inválido",
-          description: "Digite um CPF válido com 11 dígitos.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       if (!formData.phone || formData.phone.replace(/\D/g, "").length < 10) {
         toast({
           title: "Telefone inválido",
@@ -172,7 +154,6 @@ const Auth = () => {
         const redirectUrl =
           import.meta.env.VITE_SUPABASE_OAUTH_REDIRECT_URL ||
           `${window.location.origin}/auth`;
-        const normalizedCpf = formData.cpf.replace(/\D/g, "");
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -186,14 +167,6 @@ const Auth = () => {
         });
         if (error) throw error;
         if (data.user) {
-          const { error: cpfError } = await supabase
-            .from("profiles")
-            .update({ cpf: normalizedCpf } as any)
-            .eq("user_id", data.user.id);
-
-          if (cpfError) {
-            console.warn("Unable to update CPF in profiles:", cpfError);
-          }
           await logAuthEvent(data.user.id, 'signup');
           toast({
             title: "Conta criada com sucesso!",
@@ -409,22 +382,6 @@ const Auth = () => {
                           placeholder="Seu nome"
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="pl-10 h-12"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="cpf">CPF</Label>
-                      <div className="relative">
-                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <Input
-                          id="cpf"
-                          type="text"
-                          placeholder="000.000.000-00"
-                          value={formData.cpf}
-                          onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
                           className="pl-10 h-12"
                           required
                         />

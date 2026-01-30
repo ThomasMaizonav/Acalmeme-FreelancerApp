@@ -21,7 +21,9 @@ function json(status: number, body: Record<string, unknown>) {
 
 Deno.serve(async (req: Request) => {
   const auth = req.headers.get("authorization") ?? "";
-  const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+  const match = auth.match(/^Bearer\s+(.+)$/i);
+  const token = match?.[1]?.trim() ?? "";
+  const cronSecret = (Deno.env.get("CRON_SECRET") ?? "").trim();
 
   if (!cronSecret) {
     return new Response(JSON.stringify({ error: "missing CRON_SECRET" }), {
@@ -30,7 +32,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  if (auth !== `Bearer ${cronSecret}`) {
+  if (!token || token !== cronSecret) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },

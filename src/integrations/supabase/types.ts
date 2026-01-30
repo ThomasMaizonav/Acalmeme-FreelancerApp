@@ -97,7 +97,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          cpf: string | null
           created_at: string | null
           email: string | null
           free_trial_started_at: string | null
@@ -109,7 +108,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          cpf?: string | null
           created_at?: string | null
           email?: string | null
           free_trial_started_at?: string | null
@@ -121,7 +119,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          cpf?: string | null
           created_at?: string | null
           email?: string | null
           free_trial_started_at?: string | null
@@ -189,9 +186,12 @@ export type Database = {
           error_message: string | null
           id: string
           reminder_id: string
+          reminder_time_id: string | null
+          scheduled_for: string | null
           scheduled_time: string
           sent_at: string
           status: string
+          user_id: string | null
         }
         Insert: {
           channel: string
@@ -199,9 +199,12 @@ export type Database = {
           error_message?: string | null
           id?: string
           reminder_id: string
+          reminder_time_id?: string | null
+          scheduled_for?: string | null
           scheduled_time: string
           sent_at: string
           status: string
+          user_id?: string | null
         }
         Update: {
           channel?: string
@@ -209,9 +212,12 @@ export type Database = {
           error_message?: string | null
           id?: string
           reminder_id?: string
+          reminder_time_id?: string | null
+          scheduled_for?: string | null
           scheduled_time?: string
           sent_at?: string
           status?: string
+          user_id?: string | null
         }
         Relationships: []
       }
