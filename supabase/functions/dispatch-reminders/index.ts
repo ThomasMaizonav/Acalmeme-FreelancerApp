@@ -68,6 +68,10 @@ const normalizeScheduledTime = (value: unknown) => {
         }).format(parsed);
       }
     }
+    const match = trimmed.match(/^(\d{1,2}):(\d{2})/);
+    if (match) {
+      return `${match[1].padStart(2, "0")}:${match[2]}`;
+    }
     return trimmed.slice(0, 5);
   }
 
@@ -83,37 +87,10 @@ const normalizeScheduledTime = (value: unknown) => {
   return "";
 };
 
-const normalizeScheduledTime = (value: unknown) => {
-  if (!value) return "";
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (
-      trimmed.length >= 16 &&
-      (trimmed.includes("T") || trimmed.includes("-") || trimmed.includes("/"))
-    ) {
-      const parsed = new Date(trimmed);
-      if (!Number.isNaN(parsed.getTime())) {
-        return new Intl.DateTimeFormat("en-GB", {
-          timeZone: TZ,
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }).format(parsed);
-      }
-    }
-    return trimmed.slice(0, 5);
-  }
-
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return new Intl.DateTimeFormat("en-GB", {
-      timeZone: TZ,
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(value);
-  }
-
-  return "";
+const toMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map((v) => Number(v));
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
 };
 
 async function supabaseFetch(
@@ -140,6 +117,7 @@ serve(async (req) => {
     const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
 
     const cronSecret = (Deno.env.get("CRON_SECRET") || "").trim();
+    const debug = new URL(req.url).searchParams.get("debug") === "1";
 
     console.log("[dispatch] CRON_SECRET len:", cronSecret.length);
 
@@ -163,6 +141,7 @@ serve(async (req) => {
     const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
 
     const { hhmm, dow, scheduled_for, minute_start, minute_end } = getNowInTZ();
+    const nowMinutes = toMinutes(hhmm);
 
     const remindersRes = await supabaseFetch(
       supabaseUrl,
@@ -181,26 +160,48 @@ serve(async (req) => {
     let checked = 0;
     let queued = 0;
     let skipped = 0;
+    let skippedNoEmail = 0;
+    let skippedDay = 0;
+    let skippedTime = 0;
+    const matches: Array<{ reminder_id: string; reminder_time_id: string; scheduled_time: string }> = [];
 
     for (const r of reminders) {
       checked++;
 
       if (!r.email) {
         skipped++;
+        skippedNoEmail++;
         continue;
       }
       const allowed = Array.isArray(r.days_of_week) ? r.days_of_week : [];
       const allowedNums = allowed.map((value: unknown) => Number(value)).filter(Number.isFinite);
       if (!allowedNums.includes(dow)) {
         skipped++;
+        skippedDay++;
         continue;
       }
 
       const times = (r.reminder_times ?? []).filter((t: any) => t.is_active ?? true);
       for (const t of times) {
         const st = normalizeScheduledTime(t.scheduled_time);
-        if (!st) continue;
-        if (st !== hhmm) continue;
+        if (!st) {
+          skipped++;
+          skippedTime++;
+          continue;
+        }
+        const stMinutes = toMinutes(st);
+        if (stMinutes === null || nowMinutes === null || stMinutes !== nowMinutes) {
+          skipped++;
+          skippedTime++;
+          continue;
+        }
+        if (debug) {
+          matches.push({
+            reminder_id: r.id,
+            reminder_time_id: t.id,
+            scheduled_time: st,
+          });
+        }
 
         const logPayload = [
           {
@@ -287,6 +288,14 @@ serve(async (req) => {
       checked,
       queued,
       skipped,
+      ...(debug
+        ? {
+            skipped_no_email: skippedNoEmail,
+            skipped_day: skippedDay,
+            skipped_time: skippedTime,
+            matches,
+          }
+        : {}),
     });
   } catch (e) {
     return json({ error: "unexpected", message: String(e) }, 500);
