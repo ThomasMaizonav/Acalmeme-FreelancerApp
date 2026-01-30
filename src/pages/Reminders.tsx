@@ -238,14 +238,9 @@ const Reminders = () => {
 
     const uniqueTimes = toUniqueSortedTimes(formData.scheduled_times);
     const draftTime = normalizeTimeValue(timeDraft);
-    const resolvedTimes =
-      uniqueTimes.length === 0
-        ? draftTime
-          ? [draftTime]
-          : []
-        : uniqueTimes.length === 1 && draftTime && !uniqueTimes.includes(draftTime)
-          ? [draftTime]
-          : uniqueTimes;
+    const resolvedTimes = toUniqueSortedTimes(
+      [...uniqueTimes, draftTime].filter(Boolean),
+    );
 
     if (resolvedTimes.length === 0) {
       toast({
