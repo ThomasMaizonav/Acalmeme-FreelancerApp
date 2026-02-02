@@ -45,7 +45,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
     scheduled_times: reminder?.reminder_times?.map((time) => time.scheduled_time) || [],
     days_of_week: reminder?.days_of_week || [0, 1, 2, 3, 4, 5, 6],
   });
-  const [timeDraft, setTimeDraft] = useState("08:00");
+  const [timeDraft, setTimeDraft] = useState("");
 
   const normalizeTimeValue = (value: string) => value.trim().slice(0, 5);
 
@@ -90,7 +90,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       scheduled_times: normalizedTimes,
       days_of_week: days.length ? days : [0, 1, 2, 3, 4, 5, 6],
     });
-    setTimeDraft(normalizedTimes[0] ?? "08:00");
+    setTimeDraft(normalizedTimes[0] ?? "");
   }, [reminder, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,14 +108,12 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
 
     const uniqueTimes = toUniqueSortedTimes(formData.scheduled_times);
     const draftTime = normalizeTimeValue(timeDraft);
-    const resolvedTimes = toUniqueSortedTimes(
-      [...uniqueTimes, draftTime].filter(Boolean),
-    );
+    const resolvedTimes = toUniqueSortedTimes([...uniqueTimes, draftTime].filter(Boolean));
 
     if (resolvedTimes.length === 0) {
       toast({
         title: "Defina pelo menos um horário",
-        description: "Adicione um horário para salvar o lembrete.",
+        description: "É obrigatório escolher ao menos um horário.",
         variant: "destructive",
       });
       return;

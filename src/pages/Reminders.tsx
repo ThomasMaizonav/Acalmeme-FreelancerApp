@@ -64,7 +64,7 @@ const Reminders = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [deleteReminderTarget, setDeleteReminderTarget] = useState<Reminder | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
-  const [timeDraft, setTimeDraft] = useState("08:00");
+  const [timeDraft, setTimeDraft] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -146,12 +146,16 @@ const Reminders = () => {
   };
 
   const loadReminders = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const { data, error } = await supabase
       .from("reminders")
       .select(`
         id, title, description, reminder_type, days_of_week, is_active, send_email, email, timezone, created_at, updated_at, user_id,
         reminder_times (id, scheduled_time, is_active, created_at)
       `)
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -248,14 +252,12 @@ const Reminders = () => {
 
     const uniqueTimes = toUniqueSortedTimes(formData.scheduled_times);
     const draftTime = normalizeTimeValue(timeDraft);
-    const resolvedTimes = toUniqueSortedTimes(
-      [...uniqueTimes, draftTime].filter(Boolean),
-    );
+    const resolvedTimes = toUniqueSortedTimes([...uniqueTimes, draftTime].filter(Boolean));
 
     if (resolvedTimes.length === 0) {
       toast({
         title: "Defina pelo menos um horário",
-        description: "Adicione um horário para salvar o lembrete.",
+        description: "É obrigatório escolher ao menos um horário.",
         variant: "destructive",
       });
       return;
@@ -326,7 +328,7 @@ const Reminders = () => {
         days_of_week: [0, 1, 2, 3, 4, 5, 6],
         send_email: false,
       });
-      setTimeDraft("08:00");
+      setTimeDraft("");
       loadReminders();
     }
   };
@@ -349,10 +351,24 @@ const Reminders = () => {
   };
 
   const deleteReminder = async (id: string) => {
-    await supabase
+    const { error: logsError } = await supabase
+      .from("reminder_logs")
+      .delete()
+      .eq("reminder_id", id);
+
+    const { error: timesError } = await supabase
       .from("reminder_times")
       .delete()
       .eq("reminder_id", id);
+
+    if (timesError) {
+      toast({
+        title: "Erro ao deletar horários",
+        description: timesError.message,
+        variant: "destructive",
+      });
+      return;
+    }
 
     const { error } = await supabase
       .from("reminders")
@@ -362,7 +378,7 @@ const Reminders = () => {
     if (error) {
       toast({
         title: "Erro ao deletar lembrete",
-        description: error.message,
+        description: logsError ? `${error.message} (${logsError.message})` : error.message,
         variant: "destructive",
       });
     } else {
