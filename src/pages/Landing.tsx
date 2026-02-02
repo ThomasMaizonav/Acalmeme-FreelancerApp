@@ -551,8 +551,17 @@ const Landing = () => {
             <img src={logoAcalmeme} alt="Logo" className="w-8 h-8" />
             <span className="font-semibold">AcalmeMe</span>
           </div>
+          <div className="flex flex-col sm:flex-row items-center gap-2 text-xs text-muted-foreground">
+            <a href="/privacy.html" className="hover:underline">
+              Política de Privacidade
+            </a>
+            <span className="hidden sm:inline">•</span>
+            <a href="/terms.html" className="hover:underline">
+              Termos de Uso
+            </a>
+          </div>
           <p className="text-xs text-muted-foreground text-center">
-            © 2025 AcalmeMe. Cuidando da sua saúde com carinho.
+            © 2026 AcalmeMe. Cuidando da sua saúde com carinho.
           </p>
         </div>
       </footer>

@@ -364,6 +364,23 @@ const Settings = () => {
                 <Separator />
 
                 <div>
+                  <h3 className="text-lg font-semibold mb-2">Documentos legais</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Leia nossos termos e política de privacidade.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 text-sm">
+                    <a href="/privacy.html" className="text-primary font-medium hover:underline">
+                      Política de Privacidade
+                    </a>
+                    <a href="/terms.html" className="text-primary font-medium hover:underline">
+                      Termos de Uso
+                    </a>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
                   <h3 className="text-lg font-semibold mb-2">Suporte</h3>
                   <p className="text-sm text-muted-foreground mb-2">
                     Precisa de ajuda? Entre em contato conosco:

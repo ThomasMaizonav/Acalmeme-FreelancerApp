@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PremiumGuard } from "@/components/PremiumGuard";
+import { AuthGuard } from "@/components/AuthGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -42,49 +43,87 @@ const App = () => (
             <Route
               path="/crisis"
               element={
-                <PremiumGuard feature="o acesso ao app">
-                  <Crisis />
-                </PremiumGuard>
+                <AuthGuard>
+                  <PremiumGuard feature="o acesso ao app">
+                    <Crisis />
+                  </PremiumGuard>
+                </AuthGuard>
               }
             />
             <Route
               path="/calm-sessions"
               element={
-                <PremiumGuard feature="o acesso ao app">
-                  <CalmSession />
-                </PremiumGuard>
+                <AuthGuard>
+                  <PremiumGuard feature="o acesso ao app">
+                    <CalmSession />
+                  </PremiumGuard>
+                </AuthGuard>
               }
             />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin-login" element={<AdminLogin />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route
+              path="/dashboard"
+              element={
+                <AuthGuard>
+                  <Dashboard />
+                </AuthGuard>
+              }
+            />
             <Route
               path="/journal"
               element={
-                <PremiumGuard feature="o acesso ao app">
-                  <JournalNew />
-                </PremiumGuard>
+                <AuthGuard>
+                  <PremiumGuard feature="o acesso ao app">
+                    <JournalNew />
+                  </PremiumGuard>
+                </AuthGuard>
               }
             />
-            <Route path="/admin" element={<Admin />} />
+            <Route
+              path="/admin"
+              element={
+                <AuthGuard>
+                  <Admin />
+                </AuthGuard>
+              }
+            />
             <Route
               path="/reminders"
               element={
-                <PremiumGuard feature="o acesso ao app">
-                  <Reminders />
-                </PremiumGuard>
+                <AuthGuard>
+                  <PremiumGuard feature="o acesso ao app">
+                    <Reminders />
+                  </PremiumGuard>
+                </AuthGuard>
               }
             />
             <Route path="/plans" element={<Plans />} />
-            <Route path="/admin-panel" element={<AdminPanel />} />
-            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route
+              path="/admin-panel"
+              element={
+                <AuthGuard>
+                  <AdminPanel />
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/payment-success"
+              element={
+                <AuthGuard>
+                  <PaymentSuccess />
+                </AuthGuard>
+              }
+            />
             <Route path="/stripe-setup" element={<StripeSetup />} />
             <Route
               path="/settings"
               element={
-                <PremiumGuard feature="o acesso ao app">
-                  <Settings />
-                </PremiumGuard>
+                <AuthGuard>
+                  <PremiumGuard feature="o acesso ao app">
+                    <Settings />
+                  </PremiumGuard>
+                </AuthGuard>
               }
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
