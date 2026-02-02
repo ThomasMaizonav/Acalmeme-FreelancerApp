@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUserProgress } from "@/hooks/useUserProgress";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
 type Meditation = {
   id: number;
@@ -14,6 +17,11 @@ type Meditation = {
 type Verse = {
   ref: string;
   text: string;
+};
+
+type GratitudeEntry = {
+  entry_date: string;
+  items: string[];
 };
 
 const meditations: Meditation[] = [
@@ -90,28 +98,188 @@ Que a Tua paz me acompanhe agora e durante todo o dia.
 Amém.
 `;
 
+const gratitudeSuggestions = [
+  "Acordar com saúde",
+  "Respirar com calma",
+  "Minha família",
+  "Amigos de verdade",
+  "Um momento de paz",
+  "Ter onde dormir",
+  "Comida na mesa",
+  "Oração",
+  "Trabalho",
+  "Força para recomeçar",
+  "Pequenas vitórias",
+  "Cuidar de mim",
+  "Um bom banho",
+  "Um abraço sincero",
+  "O sol de hoje",
+  "Aprender algo novo",
+  "Minha fé",
+  "Meu esforço",
+];
+
+const normalizeGratidao = (items: string[] | null | undefined) => {
+  const normalized = (items ?? []).map((item) => item ?? "").slice(0, 3);
+  while (normalized.length < 3) {
+    normalized.push("");
+  }
+  return normalized;
+};
+
 const Crisis = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { updateProgress } = useUserProgress();
   const [breathingActive, setBreathingActive] = useState(false);
   const [breathingPhase, setBreathingPhase] = useState<"Inspire" | "Segure" | "Expire">("Inspire");
   const [breathCount, setBreathCount] = useState(0);
   const [gratidao, setGratidao] = useState(["", "", ""]);
+  const [savingGratidao, setSavingGratidao] = useState(false);
+  const [gratitudeHistory, setGratitudeHistory] = useState<GratitudeEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const todayEntryDate = format(new Date(), "yyyy-MM-dd");
 
   useEffect(() => {
     updateProgress();
   }, [updateProgress]);
 
+  const loadGratidao = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("gratitude_entries")
+        .select("items")
+        .eq("user_id", userId)
+        .eq("entry_date", todayEntryDate)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data?.items) {
+        setGratidao(normalizeGratidao(data.items));
+      } else {
+        setGratidao(["", "", ""]);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar gratidão:", error);
+    }
+  };
+
+  const loadGratitudeHistory = async (userId: string) => {
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from("gratitude_entries")
+        .select("entry_date, items")
+        .eq("user_id", userId)
+        .lt("entry_date", todayEntryDate)
+        .order("entry_date", { ascending: false })
+        .limit(14);
+
+      if (error) throw error;
+      setGratitudeHistory((data as GratitudeEntry[]) ?? []);
+    } catch (error) {
+      console.error("Erro ao carregar histórico de gratidão:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   useEffect(() => {
-    const saved = localStorage.getItem("gratidao");
-    if (saved) setGratidao(JSON.parse(saved));
-  }, []);
+    const loadAll = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await Promise.all([loadGratidao(user.id), loadGratitudeHistory(user.id)]);
+    };
+
+    loadAll();
+  }, [todayEntryDate]);
 
   const updateGratidao = (index: number, value: string) => {
-    const updated = [...gratidao];
-    updated[index] = value;
-    setGratidao(updated);
-    localStorage.setItem("gratidao", JSON.stringify(updated));
+    setGratidao((prev) => {
+      const updated = [...prev];
+      updated[index] = value;
+      return updated;
+    });
+  };
+
+  const addSuggestion = (suggestion: string) => {
+    const trimmed = suggestion.trim();
+    if (!trimmed) return;
+
+    setGratidao((prev) => {
+      const normalized = prev.map((item) => item.trim());
+      if (normalized.some((item) => item.toLowerCase() === trimmed.toLowerCase())) {
+        return prev;
+      }
+
+      const emptyIndex = normalized.findIndex((item) => !item);
+      if (emptyIndex === -1) {
+        toast({
+          title: "Você já preencheu os 3 motivos",
+          description: "Apague um campo para adicionar outro.",
+        });
+        return prev;
+      }
+
+      const updated = [...prev];
+      updated[emptyIndex] = trimmed;
+      return updated;
+    });
+  };
+
+  const handleSaveGratidao = async () => {
+    const cleaned = gratidao.map((item) => item.trim());
+    if (cleaned.every((item) => !item)) {
+      toast({
+        title: "Escreva pelo menos 1 motivo",
+        description: "Você pode começar com algo simples do seu dia.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingGratidao(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para salvar.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("gratitude_entries")
+        .upsert(
+          {
+            user_id: user.id,
+            entry_date: todayEntryDate,
+            items: normalizeGratidao(cleaned),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,entry_date" }
+        );
+
+      if (error) throw error;
+
+      toast({
+        title: "Gratidão salva ✨",
+        description: "Seu registro foi guardado com carinho.",
+      });
+      await loadGratitudeHistory(user.id);
+    } catch (error: any) {
+      console.error("Erro ao salvar gratidão:", error);
+      toast({
+        title: "Erro ao salvar",
+        description: error?.message || "Não foi possível salvar agora.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingGratidao(false);
+    }
   };
 
   const today = new Date();
@@ -225,6 +393,20 @@ const Crisis = () => {
             Escrever gratidão diariamente ajuda sua mente a lembrar que ainda existe luz mesmo nos dias difíceis.
           </p>
 
+          <div className="flex flex-wrap gap-2">
+            {gratitudeSuggestions.map((suggestion) => (
+              <Button
+                key={suggestion}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addSuggestion(suggestion)}
+              >
+                {suggestion}
+              </Button>
+            ))}
+          </div>
+
           <div className="space-y-3">
             {gratidao.map((item, index) => (
               <input
@@ -236,6 +418,48 @@ const Crisis = () => {
               />
             ))}
           </div>
+
+          <Button onClick={handleSaveGratidao} disabled={savingGratidao}>
+            {savingGratidao ? "Salvando..." : "Salvar gratidão"}
+          </Button>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card/80 p-6 shadow-sm space-y-4">
+          <h2 className="text-lg font-semibold">Histórico recente</h2>
+          <p className="text-sm text-muted-foreground">
+            Veja seus registros anteriores (somente leitura).
+          </p>
+
+          {loadingHistory ? (
+            <p className="text-sm text-muted-foreground">Carregando histórico...</p>
+          ) : gratitudeHistory.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ainda não há registros anteriores.</p>
+          ) : (
+            <div className="space-y-3">
+              {gratitudeHistory.map((entry) => {
+                const dateLabel = format(new Date(`${entry.entry_date}T00:00:00`), "dd/MM/yyyy");
+                const items = (entry.items ?? []).filter((item) => item?.trim());
+
+                return (
+                  <div key={entry.entry_date} className="rounded-xl border border-border bg-background/70 p-4">
+                    <p className="text-xs text-muted-foreground">{dateLabel}</p>
+                    {items.length === 0 ? (
+                      <p className="text-sm text-muted-foreground mt-2">Sem motivos salvos.</p>
+                    ) : (
+                      <div className="mt-2 space-y-1">
+                        {items.map((item, index) => (
+                          <div key={`${entry.entry_date}-${index}`} className="flex gap-2 text-sm">
+                            <span className="text-primary">•</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl border border-border bg-card/80 p-6 shadow-sm space-y-4">

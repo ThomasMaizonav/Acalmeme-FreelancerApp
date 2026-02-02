@@ -47,6 +47,12 @@ const DAYS = [
 
 const BRAZIL_TIMEZONE = "America/Sao_Paulo";
 const BRAZIL_TIMEZONE_LABEL = "Horário de Brasília (America/Sao_Paulo)";
+const scheduledTimeouts: number[] = [];
+
+const clearScheduledNotifications = () => {
+  scheduledTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+  scheduledTimeouts.length = 0;
+};
 
 const Reminders = () => {
   const navigate = useNavigate();
@@ -58,7 +64,6 @@ const Reminders = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [deleteReminderTarget, setDeleteReminderTarget] = useState<Reminder | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
-  const [scheduledTimeouts, setScheduledTimeouts] = useState<number[]>([]);
   const [timeDraft, setTimeDraft] = useState("08:00");
 
   const [formData, setFormData] = useState({
@@ -205,10 +210,15 @@ const Reminders = () => {
         requireInteraction: true,
       });
 
+      const index = scheduledTimeouts.indexOf(timeoutId);
+      if (index >= 0) {
+        scheduledTimeouts.splice(index, 1);
+      }
+
       scheduleNextReminder(reminder, time);
     }, timeout);
 
-    setScheduledTimeouts(prev => [...prev, timeoutId]);
+    scheduledTimeouts.push(timeoutId);
   };
 
   const scheduleNotifications = (reminders: Reminder[]) => {
