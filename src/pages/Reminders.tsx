@@ -103,6 +103,7 @@ const Reminders = () => {
     scheduled_times: [],
     days_of_week: [0, 1, 2, 3, 4, 5, 6],
     send_email: false,
+    send_push: true,
   });
 
   const normalizeDays = (days?: Array<number | string> | null) =>
@@ -203,7 +204,7 @@ const Reminders = () => {
     const { data, error } = await supabase
       .from("reminders")
       .select(`
-        id, title, description, reminder_type, days_of_week, is_active, send_email, email, timezone, created_at, updated_at, user_id,
+        id, title, description, reminder_type, days_of_week, is_active, send_email, send_push, email, timezone, created_at, updated_at, user_id,
         reminder_times (id, scheduled_time, is_active, created_at)
       `)
       .eq("user_id", user.id)
@@ -251,6 +252,7 @@ const Reminders = () => {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!reminder.is_active) return;
+    if (reminder.send_push === false) return;
     if (!(time.is_active ?? true)) return;
 
     const nextDate = getNextReminderDate(reminder.days_of_week, time.scheduled_time);
@@ -301,6 +303,7 @@ const Reminders = () => {
 
       reminders.forEach((reminder) => {
         if (!reminder.is_active) return;
+        if (reminder.send_push === false) return;
 
         const days = normalizeDays(reminder.days_of_week);
         if (days.length === 0) return;
@@ -350,6 +353,7 @@ const Reminders = () => {
 
     clearScheduledNotifications();
     reminders.forEach(reminder => {
+      if (reminder.send_push === false) return;
       reminder.reminder_times?.forEach(time => scheduleNextReminder(reminder, time));
     });
   };
@@ -382,6 +386,15 @@ const Reminders = () => {
       return;
     }
 
+    if (!formData.send_email && !formData.send_push) {
+      toast({
+        title: "Ative ao menos uma notificação",
+        description: "Escolha receber no celular e/ou por e-mail.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error: timezoneError } = await supabase
       .from("profiles")
       .update({ timezone: BRAZIL_TIMEZONE })
@@ -400,6 +413,7 @@ const Reminders = () => {
         reminder_type: formData.reminder_type as "medication" | "water" | "exercise" | "custom",
         days_of_week: formData.days_of_week.map(d => Number(d)),
         send_email: formData.send_email,
+        send_push: formData.send_push,
         email: formData.send_email ? user.email : null,
         timezone: BRAZIL_TIMEZONE,
       })
@@ -432,11 +446,17 @@ const Reminders = () => {
         variant: "destructive",
       });
     } else {
+      const channelDescription = formData.send_push && formData.send_email
+        ? "Você receberá uma notificação e um e-mail nesse horário."
+        : formData.send_push
+          ? "Você receberá uma notificação nesse horário."
+          : formData.send_email
+            ? "Você receberá um e-mail nesse horário."
+            : "Seu lembrete foi configurado com sucesso.";
+
       toast({
         title: "Lembrete criado",
-        description: formData.send_email
-          ? "Você receberá uma notificação e um e-mail nesse horário."
-          : "Seu lembrete foi configurado com sucesso.",
+        description: channelDescription,
       });
       setIsDialogOpen(false);
       setFormData({
@@ -446,6 +466,7 @@ const Reminders = () => {
         scheduled_times: [],
         days_of_week: [0, 1, 2, 3, 4, 5, 6],
         send_email: false,
+        send_push: true,
       });
       setTimeDraft("");
       loadReminders();
@@ -783,6 +804,22 @@ const Reminders = () => {
                   </div>
 
                   <div className="space-y-2 border-t pt-4">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="send_push" className="flex items-center gap-2">
+                        <Bell className="h-4 w-4" />
+                        Notificação no celular
+                      </Label>
+                      <Switch
+                        id="send_push"
+                        checked={formData.send_push}
+                        onCheckedChange={(checked) =>
+                          setFormData(prev => ({ ...prev, send_push: checked }))
+                        }
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Receba alertas no app mesmo com a tela bloqueada.
+                    </p>
                     <div className="flex items-center justify-between">
                       <Label htmlFor="send_email" className="flex items-center gap-2">
                         <Mail className="h-4 w-4" />
