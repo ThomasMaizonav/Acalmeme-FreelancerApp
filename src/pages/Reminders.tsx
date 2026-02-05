@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications, type Weekday } from "@capacitor/local-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,11 +50,39 @@ const DAYS = [
 const BRAZIL_TIMEZONE = "America/Sao_Paulo";
 const BRAZIL_TIMEZONE_LABEL = "Horário de Brasília (America/Sao_Paulo)";
 const scheduledTimeouts: number[] = [];
+const LOCAL_NOTIFICATION_ID_BASE = 400_000_000;
+const LOCAL_NOTIFICATION_ID_RANGE = 100_000_000;
 
 const clearScheduledNotifications = () => {
   scheduledTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
   scheduledTimeouts.length = 0;
 };
+
+const normalizePermission = (value?: string): NotificationPermission => {
+  if (value === "granted") return "granted";
+  if (value === "denied") return "denied";
+  return "default";
+};
+
+const parseTime = (value: string) => {
+  const [hour, minute] = value.split(":").map((item) => Number(item));
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return { hour, minute };
+};
+
+const toWeekday = (day: number) => day + 1;
+
+const hashString = (input: string) => {
+  let hash = 0;
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash * 31 + input.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+};
+
+const makeLocalNotificationId = (reminderId: string, weekday: number, time: string) =>
+  LOCAL_NOTIFICATION_ID_BASE + (hashString(`${reminderId}:${weekday}:${time}`) % LOCAL_NOTIFICATION_ID_RANGE);
 
 const Reminders = () => {
   const navigate = useNavigate();
@@ -105,7 +135,7 @@ const Reminders = () => {
   useEffect(() => {
     checkAuth();
     loadReminders();
-    checkNotificationPermission();
+    void checkNotificationPermission();
   }, []);
 
   useEffect(() => {
@@ -124,19 +154,40 @@ const Reminders = () => {
     }
   };
 
-  const checkNotificationPermission = () => {
+  const checkNotificationPermission = async () => {
+    if (Capacitor.isNativePlatform()) {
+      const permission = await LocalNotifications.checkPermissions();
+      setNotificationPermission(normalizePermission(permission.display));
+      return;
+    }
+
     if ("Notification" in window) {
       setNotificationPermission(Notification.permission);
     }
   };
 
   const requestNotificationPermission = async () => {
+    if (Capacitor.isNativePlatform()) {
+      const permission = await LocalNotifications.requestPermissions();
+      const normalized = normalizePermission(permission.display);
+      setNotificationPermission(normalized);
+
+      if (normalized === "granted") {
+        await scheduleNotifications(reminders);
+        toast({
+          title: "Notificações ativadas",
+          description: "Você receberá lembretes nos horários configurados.",
+        });
+      }
+      return;
+    }
+
     if ("Notification" in window) {
       const permission = await Notification.requestPermission();
       setNotificationPermission(permission);
       
       if (permission === "granted") {
-        scheduleNotifications(reminders);
+        await scheduleNotifications(reminders);
         toast({
           title: "Notificações ativadas",
           description: "Você receberá lembretes nos horários configurados.",
@@ -171,7 +222,7 @@ const Reminders = () => {
         reminder_times: reminder.reminder_times ?? [],
       }));
       setReminders((normalized as Reminder[]) || []);
-      scheduleNotifications((normalized as Reminder[]) || []);
+      void scheduleNotifications((normalized as Reminder[]) || []);
     }
   };
 
@@ -225,7 +276,75 @@ const Reminders = () => {
     scheduledTimeouts.push(timeoutId);
   };
 
-  const scheduleNotifications = (reminders: Reminder[]) => {
+  const scheduleNotifications = async (reminders: Reminder[]) => {
+    if (Capacitor.isNativePlatform()) {
+      const permission = await LocalNotifications.checkPermissions();
+      if (normalizePermission(permission.display) !== "granted") return;
+
+      const pending = await LocalNotifications.getPending();
+      const toCancel = pending.notifications
+        .map((notification) => notification.id)
+        .filter(
+          (id): id is number =>
+            typeof id === "number" &&
+            id >= LOCAL_NOTIFICATION_ID_BASE &&
+            id < LOCAL_NOTIFICATION_ID_BASE + LOCAL_NOTIFICATION_ID_RANGE
+        )
+        .map((id) => ({ id }));
+
+      if (toCancel.length > 0) {
+        await LocalNotifications.cancel({ notifications: toCancel });
+      }
+
+      const notifications = [];
+      const usedIds = new Set<number>();
+
+      reminders.forEach((reminder) => {
+        if (!reminder.is_active) return;
+
+        const days = normalizeDays(reminder.days_of_week);
+        if (days.length === 0) return;
+
+        reminder.reminder_times?.forEach((time) => {
+          if (!(time.is_active ?? true)) return;
+          const parsed = parseTime(time.scheduled_time);
+          if (!parsed) return;
+
+          days.forEach((day) => {
+            const weekday = toWeekday(day) as Weekday;
+            const id = makeLocalNotificationId(reminder.id, weekday, time.scheduled_time);
+            if (usedIds.has(id)) return;
+            usedIds.add(id);
+
+            notifications.push({
+              id,
+              title: reminder.title || "Lembrete",
+              body: reminder.description || "Hora do seu lembrete!",
+              schedule: {
+                on: {
+                  weekday,
+                  hour: parsed.hour,
+                  minute: parsed.minute,
+                  second: 0,
+                },
+                allowWhileIdle: true,
+              },
+              extra: {
+                reminderId: reminder.id,
+                reminderTimeId: time.id,
+                source: "reminders",
+              },
+            });
+          });
+        });
+      });
+
+      if (notifications.length > 0) {
+        await LocalNotifications.schedule({ notifications });
+      }
+      return;
+    }
+
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
 
