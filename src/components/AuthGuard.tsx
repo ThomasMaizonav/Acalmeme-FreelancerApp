@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/i18n/language";
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -8,6 +9,7 @@ interface AuthGuardProps {
 
 export const AuthGuard = ({ children }: AuthGuardProps) => {
   const navigate = useNavigate();
+  const { text } = useLanguage();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -42,7 +44,9 @@ export const AuthGuard = ({ children }: AuthGuardProps) => {
   if (checking) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+        <div className="animate-pulse text-muted-foreground">
+          {text({ pt: "Carregando...", en: "Loading..." })}
+        </div>
       </div>
     );
   }

@@ -1,9 +1,11 @@
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/i18n/language";
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
+  const { text } = useLanguage();
 
   useEffect(() => {
     const stored = localStorage.getItem("theme");
@@ -27,7 +29,11 @@ export function ThemeToggle() {
       size="icon"
       onClick={toggleTheme}
       className="rounded-full"
-      aria-label={isDark ? "Ativar modo claro" : "Ativar modo escuro"}
+      aria-label={
+        isDark
+          ? text({ pt: "Ativar modo claro", en: "Enable light mode" })
+          : text({ pt: "Ativar modo escuro", en: "Enable dark mode" })
+      }
     >
       {isDark ? (
         <Sun className="h-5 w-5" />

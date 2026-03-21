@@ -1,11 +1,13 @@
 import { Star, Award, Crown } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useLanguage } from "@/i18n/language";
 
 interface RewardsDisplayProps {
   currentStreak: number;
 }
 
 export const RewardsDisplay = ({ currentStreak }: RewardsDisplayProps) => {
+  const { text, isEnglish } = useLanguage();
   // Calculate rewards based on streak
   const stars = Math.min(currentStreak, 6);
   const medals = currentStreak >= 7 ? Math.floor(currentStreak / 7) : 0;
@@ -13,7 +15,9 @@ export const RewardsDisplay = ({ currentStreak }: RewardsDisplayProps) => {
 
   return (
     <Card className="p-6 glass shadow-soft">
-      <h3 className="text-xl font-semibold mb-4 text-center">Suas Recompensas</h3>
+      <h3 className="text-xl font-semibold mb-4 text-center">
+        {text({ pt: "Suas Recompensas", en: "Your Rewards" })}
+      </h3>
       
       <div className="space-y-6">
         {/* Current Streak */}
@@ -21,13 +25,17 @@ export const RewardsDisplay = ({ currentStreak }: RewardsDisplayProps) => {
           <div className="text-4xl font-bold bg-gradient-hero bg-clip-text text-transparent mb-1">
             {currentStreak}
           </div>
-          <p className="text-sm text-muted-foreground">dias consecutivos</p>
+          <p className="text-sm text-muted-foreground">
+            {text({ pt: "dias consecutivos", en: "consecutive days" })}
+          </p>
         </div>
 
         {/* Stars (1-6 days) */}
         {currentStreak > 0 && currentStreak < 7 && (
           <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-3">Estrelas Conquistadas</p>
+            <p className="text-sm text-muted-foreground mb-3">
+              {text({ pt: "Estrelas Conquistadas", en: "Stars Earned" })}
+            </p>
             <div className="flex justify-center gap-2">
               {Array.from({ length: stars }).map((_, i) => (
                 <Star
@@ -44,7 +52,9 @@ export const RewardsDisplay = ({ currentStreak }: RewardsDisplayProps) => {
               ))}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {7 - currentStreak} {7 - currentStreak === 1 ? 'dia' : 'dias'} para ganhar uma medalha
+              {isEnglish
+                ? `${7 - currentStreak} ${7 - currentStreak === 1 ? "day" : "days"} to earn a medal`
+                : `${7 - currentStreak} ${7 - currentStreak === 1 ? "dia" : "dias"} para ganhar uma medalha`}
             </p>
           </div>
         )}
@@ -52,7 +62,9 @@ export const RewardsDisplay = ({ currentStreak }: RewardsDisplayProps) => {
         {/* Medals (7+ days) */}
         {medals > 0 && (
           <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-3">Medalhas Conquistadas</p>
+            <p className="text-sm text-muted-foreground mb-3">
+              {text({ pt: "Medalhas Conquistadas", en: "Medals Earned" })}
+            </p>
             <div className="flex justify-center gap-3 flex-wrap">
               {Array.from({ length: Math.min(medals, 4) }).map((_, i) => (
                 <Award
@@ -64,12 +76,16 @@ export const RewardsDisplay = ({ currentStreak }: RewardsDisplayProps) => {
             </div>
             {medals > 1 && (
               <p className="text-sm font-semibold text-accent mt-2">
-                × {medals} {medals === 1 ? 'medalha' : 'medalhas'}
+                {isEnglish
+                  ? `× ${medals} ${medals === 1 ? "medal" : "medals"}`
+                  : `× ${medals} ${medals === 1 ? "medalha" : "medalhas"}`}
               </p>
             )}
             {!hasCrown && (
               <p className="text-xs text-muted-foreground mt-2">
-                {30 - currentStreak} {30 - currentStreak === 1 ? 'dia' : 'dias'} para ganhar a coroa
+                {isEnglish
+                  ? `${30 - currentStreak} ${30 - currentStreak === 1 ? "day" : "days"} to earn the crown`
+                  : `${30 - currentStreak} ${30 - currentStreak === 1 ? "dia" : "dias"} para ganhar a coroa`}
               </p>
             )}
           </div>
@@ -78,15 +94,17 @@ export const RewardsDisplay = ({ currentStreak }: RewardsDisplayProps) => {
         {/* Crown (30+ days) */}
         {hasCrown && (
           <div className="text-center">
-            <p className="text-sm text-muted-foreground mb-3">Conquista Máxima</p>
+            <p className="text-sm text-muted-foreground mb-3">
+              {text({ pt: "Conquista Máxima", en: "Top Achievement" })}
+            </p>
             <div className="flex justify-center">
               <Crown className="w-16 h-16 text-primary fill-primary animate-calm-pulse" />
             </div>
             <p className="text-lg font-bold bg-gradient-hero bg-clip-text text-transparent mt-2">
-              Mestre da Calma
+              {text({ pt: "Mestre da Calma", en: "Master of Calm" })}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              30 dias de prática consecutiva!
+              {text({ pt: "30 dias de prática consecutiva!", en: "30 consecutive days of practice!" })}
             </p>
           </div>
         )}
@@ -94,11 +112,17 @@ export const RewardsDisplay = ({ currentStreak }: RewardsDisplayProps) => {
         {/* Motivational message */}
         {currentStreak === 0 ? (
           <p className="text-sm text-center text-muted-foreground italic">
-            Complete uma atividade hoje para começar sua sequência ✨
+            {text({
+              pt: "Complete uma atividade hoje para começar sua sequência ✨",
+              en: "Complete an activity today to start your streak ✨",
+            })}
           </p>
         ) : (
           <p className="text-sm text-center text-muted-foreground italic">
-            Continue assim! Cada dia conta 💙
+            {text({
+              pt: "Continue assim! Cada dia conta 💙",
+              en: "Keep going! Every day counts 💙",
+            })}
           </p>
         )}
       </div>

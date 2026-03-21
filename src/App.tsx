@@ -7,6 +7,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
+import { useLanguage } from "@/i18n/language";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Crisis = lazy(() => import("./pages/Crisis"));
@@ -27,114 +28,123 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const queryClient = new QueryClient();
 const isNativeApp = Capacitor.isNativePlatform();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Suspense
-          fallback={
-            <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-              Carregando...
-            </div>
-          }
-        >
-          <Routes>
-            <Route path="/" element={isNativeApp ? <Navigate to="/auth" replace /> : <Landing />} />
-            <Route
-              path="/crisis"
-              element={
-                <AuthGuard>
-                  <PremiumGuard feature="o acesso ao app">
-                    <Crisis />
-                  </PremiumGuard>
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/calm-sessions"
-              element={
-                <AuthGuard>
-                  <PremiumGuard feature="o acesso ao app">
-                    <CalmSession />
-                  </PremiumGuard>
-                </AuthGuard>
-              }
-            />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin-login" element={<AdminLogin />} />
-            <Route
-              path="/dashboard"
-              element={
-                <AuthGuard>
-                  <Dashboard />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/journal"
-              element={
-                <AuthGuard>
-                  <PremiumGuard feature="o acesso ao app">
-                    <JournalNew />
-                  </PremiumGuard>
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <AuthGuard>
-                  <Admin />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/reminders"
-              element={
-                <AuthGuard>
-                  <PremiumGuard feature="o acesso ao app">
-                    <Reminders />
-                  </PremiumGuard>
-                </AuthGuard>
-              }
-            />
-            <Route path="/plans" element={<Plans />} />
-            <Route
-              path="/admin-panel"
-              element={
-                <AuthGuard>
-                  <AdminPanel />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/payment-success"
-              element={
-                <AuthGuard>
-                  <PaymentSuccess />
-                </AuthGuard>
-              }
-            />
-            <Route path="/stripe-setup" element={<StripeSetup />} />
-            <Route
-              path="/settings"
-              element={
-                <AuthGuard>
-                  <PremiumGuard feature="o acesso ao app">
-                    <Settings />
-                  </PremiumGuard>
-                </AuthGuard>
-              }
-            />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const appAccessFeature = {
+  pt: "o acesso ao app",
+  en: "app access",
+};
+
+const App = () => {
+  const { text } = useLanguage();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Suspense
+            fallback={
+              <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+                {text({ pt: "Carregando...", en: "Loading..." })}
+              </div>
+            }
+          >
+            <Routes>
+              <Route path="/" element={isNativeApp ? <Navigate to="/auth" replace /> : <Landing />} />
+              <Route
+                path="/crisis"
+                element={
+                  <AuthGuard>
+                    <PremiumGuard feature={appAccessFeature}>
+                      <Crisis />
+                    </PremiumGuard>
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/calm-sessions"
+                element={
+                  <AuthGuard>
+                    <PremiumGuard feature={appAccessFeature}>
+                      <CalmSession />
+                    </PremiumGuard>
+                  </AuthGuard>
+                }
+              />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <AuthGuard>
+                    <Dashboard />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/journal"
+                element={
+                  <AuthGuard>
+                    <PremiumGuard feature={appAccessFeature}>
+                      <JournalNew />
+                    </PremiumGuard>
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <AuthGuard>
+                    <Admin />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/reminders"
+                element={
+                  <AuthGuard>
+                    <PremiumGuard feature={appAccessFeature}>
+                      <Reminders />
+                    </PremiumGuard>
+                  </AuthGuard>
+                }
+              />
+              <Route path="/plans" element={<Plans />} />
+              <Route
+                path="/admin-panel"
+                element={
+                  <AuthGuard>
+                    <AdminPanel />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/payment-success"
+                element={
+                  <AuthGuard>
+                    <PaymentSuccess />
+                  </AuthGuard>
+                }
+              />
+              <Route path="/stripe-setup" element={<StripeSetup />} />
+              <Route
+                path="/settings"
+                element={
+                  <AuthGuard>
+                    <PremiumGuard feature={appAccessFeature}>
+                      <Settings />
+                    </PremiumGuard>
+                  </AuthGuard>
+                }
+              />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

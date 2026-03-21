@@ -7,11 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import logoAcalmeme from "@/assets/logo-acalmeme.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useLanguage } from "@/i18n/language";
 
 const Plans = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { text, isEnglish } = useLanguage();
 
   const handleSubscribe = async () => {
     try {
@@ -29,8 +31,8 @@ const Plans = () => {
 
       if (!priceId) {
         toast({
-          title: "Erro de configuração",
-          description: "VITE_STRIPE_PRICE_ID não definido.",
+          title: text({ pt: "Erro de configuração", en: "Configuration error" }),
+          description: text({ pt: "VITE_STRIPE_PRICE_ID não definido.", en: "VITE_STRIPE_PRICE_ID is not defined." }),
           variant: "destructive",
         });
         return;
@@ -38,8 +40,11 @@ const Plans = () => {
 
       if (!supabaseKey) {
         toast({
-          title: "Erro de configuração",
-          description: "VITE_SUPABASE_PUBLISHABLE_KEY não definido.",
+          title: text({ pt: "Erro de configuração", en: "Configuration error" }),
+          description: text({
+            pt: "VITE_SUPABASE_PUBLISHABLE_KEY não definido.",
+            en: "VITE_SUPABASE_PUBLISHABLE_KEY is not defined.",
+          }),
           variant: "destructive",
         });
         return;
@@ -69,8 +74,8 @@ const Plans = () => {
       if (!response.ok) {
         console.error("Checkout error:", data);
         toast({
-          title: "Erro",
-          description: data?.error || "Erro ao criar sessão do checkout.",
+          title: text({ pt: "Erro", en: "Error" }),
+          description: data?.error || text({ pt: "Erro ao criar sessão do checkout.", en: "Failed to create checkout session." }),
           variant: "destructive",
         });
         return;
@@ -82,15 +87,21 @@ const Plans = () => {
       }
 
       toast({
-        title: "Erro",
-        description: "Checkout não retornou URL. Verifique a configuração do Stripe.",
+        title: text({ pt: "Erro", en: "Error" }),
+        description: text({
+          pt: "Checkout não retornou URL. Verifique a configuração do Stripe.",
+          en: "Checkout did not return a URL. Check your Stripe configuration.",
+        }),
         variant: "destructive",
       });
     } catch (error) {
       console.error("Checkout exception:", error);
       toast({
-        title: "Erro",
-        description: "Não foi possível iniciar o processo de pagamento. Tente novamente.",
+        title: text({ pt: "Erro", en: "Error" }),
+        description: text({
+          pt: "Não foi possível iniciar o processo de pagamento. Tente novamente.",
+          en: "Could not start the payment process. Please try again.",
+        }),
         variant: "destructive",
       });
     } finally {
@@ -108,7 +119,7 @@ const Plans = () => {
             onClick={() => navigate(-1)}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
+            {text({ pt: "Voltar", en: "Back" })}
           </Button>
           <ThemeToggle />
         </div>
@@ -116,11 +127,16 @@ const Plans = () => {
         <div className="text-center mb-10 sm:mb-14">
           <img src={logoAcalmeme} alt="Logo" className="w-16 h-16 mx-auto mb-4" />
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">
-            Você está a um passo de
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> facilitar sua vida</span>
+            {text({ pt: "Você está a um passo de", en: "You are one step away from" })}
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              {text({ pt: " facilitar sua vida", en: " making life easier" })}
+            </span>
           </h1>
           <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
-            Escolha o plano ideal para nunca mais esquecer seus medicamentos
+            {text({
+              pt: "Escolha o plano ideal para nunca mais esquecer seus medicamentos",
+              en: "Choose the ideal plan to never forget your medication again",
+            })}
           </p>
         </div>
 
@@ -128,33 +144,33 @@ const Plans = () => {
           {/* Free Plan */}
           <Card className="relative">
             <CardHeader className="pb-4">
-              <CardTitle className="text-2xl">Gratuito</CardTitle>
-              <CardDescription>Experimente por 30 dias</CardDescription>
+              <CardTitle className="text-2xl">{text({ pt: "Gratuito", en: "Free" })}</CardTitle>
+              <CardDescription>{text({ pt: "Experimente por 30 dias", en: "Try it for 30 days" })}</CardDescription>
               <div className="mt-4">
                 <span className="text-4xl font-bold">R$ 0</span>
-                <span className="text-muted-foreground">/mês</span>
+                <span className="text-muted-foreground">{isEnglish ? "/month" : "/mês"}</span>
               </div>
               <p className="text-sm text-primary font-medium mt-2">
-                30 dias grátis, sem cartão de crédito
+                {text({ pt: "30 dias grátis, sem cartão de crédito", en: "30 free days, no credit card required" })}
               </p>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Até 3 lembretes de medicação</span>
+                  <span>{text({ pt: "Até 3 lembretes de medicação", en: "Up to 3 medication reminders" })}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Notificações no navegador</span>
+                  <span>{text({ pt: "Notificações no navegador", en: "Browser notifications" })}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Diário emocional (3 entradas/semana)</span>
+                  <span>{text({ pt: "Diário emocional (3 entradas/semana)", en: "Emotional journal (3 entries/week)" })}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Sessão de calma básica</span>
+                  <span>{text({ pt: "Sessão de calma básica", en: "Basic calm session" })}</span>
                 </li>
               </ul>
               <Button 
@@ -162,7 +178,7 @@ const Plans = () => {
                 className="w-full"
                 onClick={() => navigate('/auth')}
               >
-                Começar Grátis
+                {text({ pt: "Começar Grátis", en: "Start Free" })}
               </Button>
             </CardContent>
           </Card>
@@ -171,48 +187,48 @@ const Plans = () => {
           <Card className="relative border-2 border-primary shadow-xl">
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-hero text-white px-6 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
               <Crown className="w-4 h-4" />
-              Mais Popular
+              {text({ pt: "Mais Popular", en: "Most Popular" })}
             </div>
             <CardHeader className="pb-4">
               <CardTitle className="text-2xl flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-secondary" />
                 Premium
               </CardTitle>
-              <CardDescription>Acesso completo a tudo</CardDescription>
+              <CardDescription>{text({ pt: "Acesso completo a tudo", en: "Full access to everything" })}</CardDescription>
               <div className="mt-4">
                 <span className="text-4xl font-bold">R$ 9,90</span>
-                <span className="text-muted-foreground">/mês</span>
+                <span className="text-muted-foreground">{isEnglish ? "/month" : "/mês"}</span>
               </div>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span><strong>Lembretes ilimitados</strong> de medicação</span>
+                  <span>{text({ pt: "Lembretes ilimitados de medicação", en: "Unlimited medication reminders" })}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span><strong>Notificações por e-mail</strong> + navegador</span>
+                  <span>{text({ pt: "Notificações por e-mail + navegador", en: "Email + browser notifications" })}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Diário emocional <strong>ilimitado</strong></span>
+                  <span>{text({ pt: "Diário emocional ilimitado", en: "Unlimited emotional journal" })}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Sessões de calma com <strong>música relaxante</strong></span>
+                  <span>{text({ pt: "Sessões de calma com música relaxante", en: "Calm sessions with relaxing music" })}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Modo Crise <strong>ilimitado</strong> 24/7</span>
+                  <span>{text({ pt: "Modo Crise ilimitado 24/7", en: "Unlimited Crisis Mode 24/7" })}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Sistema de recompensas e progresso</span>
+                  <span>{text({ pt: "Sistema de recompensas e progresso", en: "Rewards and progress system" })}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span>Suporte prioritário</span>
+                  <span>{text({ pt: "Suporte prioritário", en: "Priority support" })}</span>
                 </li>
               </ul>
               <Button 
@@ -221,10 +237,12 @@ const Plans = () => {
                 disabled={isSubmitting}
               >
                 <CreditCard className="w-5 h-5 mr-2" />
-                {isSubmitting ? "Carregando..." : "Assinar Agora"}
+                {isSubmitting
+                  ? text({ pt: "Carregando...", en: "Loading..." })
+                  : text({ pt: "Assinar Agora", en: "Subscribe Now" })}
               </Button>
               <p className="text-xs text-muted-foreground text-center mt-4">
-                Cancele a qualquer momento. Sem multas.
+                {text({ pt: "Cancele a qualquer momento. Sem multas.", en: "Cancel anytime. No fees." })}
               </p>
             </CardContent>
           </Card>
@@ -235,15 +253,15 @@ const Plans = () => {
           <div className="flex flex-wrap justify-center gap-6 sm:gap-10 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" />
-              <span>Pagamento seguro</span>
+              <span>{text({ pt: "Pagamento seguro", en: "Secure payment" })}</span>
             </div>
             <div className="flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-primary" />
-              <span>Processado por Stripe</span>
+              <span>{text({ pt: "Processado por Stripe", en: "Processed by Stripe" })}</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-primary" />
-              <span>Cancele quando quiser</span>
+              <span>{text({ pt: "Cancele quando quiser", en: "Cancel whenever you want" })}</span>
             </div>
           </div>
         </div>

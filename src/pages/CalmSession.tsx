@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Volume2, VolumeX, Play, Pause, Clock } from "lucide-react";
 import { useUserProgress } from "@/hooks/useUserProgress";
+import { useLanguage } from "@/i18n/language";
 
 const DURATIONS = [
   { label: "1 min", seconds: 60 },
@@ -17,6 +18,7 @@ const RELAXING_MUSIC_URL = "/meditationMusic.mp3";
 const CalmSession = () => {
   const navigate = useNavigate();
   const { updateProgress } = useUserProgress();
+  const { text } = useLanguage();
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -108,7 +110,7 @@ const CalmSession = () => {
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold">Sessão de Calma</h1>
+        <h1 className="text-lg font-semibold">{text({ pt: "Sessão de Calma", en: "Calm Session" })}</h1>
         <Button
           variant="ghost"
           size="icon"
@@ -125,9 +127,9 @@ const CalmSession = () => {
             <div className="w-16 h-16 bg-gradient-hero rounded-full flex items-center justify-center mx-auto mb-6">
               <Clock className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Escolha a duração</h2>
+            <h2 className="text-2xl font-bold mb-2">{text({ pt: "Escolha a duração", en: "Choose the duration" })}</h2>
             <p className="text-muted-foreground mb-6">
-              Respire com calma e escolha quanto tempo deseja meditar.
+              {text({ pt: "Respire com calma e escolha quanto tempo deseja meditar.", en: "Breathe calmly and choose how long you want to meditate." })}
             </p>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
@@ -145,7 +147,9 @@ const CalmSession = () => {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              {soundEnabled ? "🎵 Música leve ativada" : "🔇 Música desativada"}
+              {soundEnabled
+                ? text({ pt: "🎵 Música leve ativada", en: "🎵 Soft music enabled" })
+                : text({ pt: "🔇 Música desativada", en: "🔇 Music disabled" })}
             </p>
           </Card>
         </div>
@@ -154,11 +158,19 @@ const CalmSession = () => {
           <div className="flex-1 flex items-center justify-center px-6">
             <Card className="w-full max-w-md p-6 sm:p-8 text-center">
               <p className="text-sm text-muted-foreground mb-2">
-                {selectedDuration ? `Sessão de ${Math.floor(selectedDuration / 60)} min` : "Sessão"}
+                {selectedDuration
+                  ? text({
+                      pt: `Sessão de ${Math.floor(selectedDuration / 60)} min`,
+                      en: `${Math.floor(selectedDuration / 60)} min session`,
+                    })
+                  : text({ pt: "Sessão", en: "Session" })}
               </p>
               <div className="text-4xl font-bold mb-4">{formatTime(timeRemaining)}</div>
               <p className="text-sm text-muted-foreground">
-                Inspire pelo nariz, segure um instante e solte devagar pela boca.
+                {text({
+                  pt: "Inspire pelo nariz, segure um instante e solte devagar pela boca.",
+                  en: "Inhale through your nose, hold for a moment, and exhale slowly through your mouth.",
+                })}
               </p>
             </Card>
           </div>
@@ -176,34 +188,34 @@ const CalmSession = () => {
                     {isPaused ? (
                       <>
                         <Play className="w-5 h-5" />
-                        Continuar
+                        {text({ pt: "Continuar", en: "Resume" })}
                       </>
                     ) : (
                       <>
                         <Pause className="w-5 h-5" />
-                        Pausar
+                        {text({ pt: "Pausar", en: "Pause" })}
                       </>
                     )}
                   </Button>
                   <Button variant="ghost" size="lg" onClick={resetSession}>
-                    Encerrar
+                    {text({ pt: "Encerrar", en: "End" })}
                   </Button>
                 </div>
               </div>
             ) : (
               <Card className="p-6 rounded-2xl max-w-md mx-auto text-center">
                 <p className="text-lg font-medium mb-4">
-                  🎉 Parabéns! Você completou a sessão.
+                  {text({ pt: "🎉 Parabéns! Você completou a sessão.", en: "🎉 Congratulations! You completed the session." })}
                 </p>
                 <p className="text-muted-foreground mb-6">
-                  Reserve um momento para sentir a tranquilidade.
+                  {text({ pt: "Reserve um momento para sentir a tranquilidade.", en: "Take a moment to feel the calm." })}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Button variant="default" onClick={() => navigate(-1)}>
-                    Voltar
+                    {text({ pt: "Voltar", en: "Back" })}
                   </Button>
                   <Button variant="outline" onClick={resetSession}>
-                    Nova sessão
+                    {text({ pt: "Nova sessão", en: "New session" })}
                   </Button>
                 </div>
               </Card>
