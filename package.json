@@ -15,7 +15,11 @@
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
+<<<<<<< HEAD
     "@capacitor/local-notifications": "^8.0.0",
+=======
+    "@capacitor/local-notifications": "^7.0.4",
+>>>>>>> e7f4f0d84fec8424892823dbff2066f04fa51bdc
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",

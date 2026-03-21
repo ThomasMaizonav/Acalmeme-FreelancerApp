@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.acalmeme.web',
+  appId: 'com.acalmeme.app',
   appName: 'AcalmeMe',
   webDir: 'dist',
   server: {

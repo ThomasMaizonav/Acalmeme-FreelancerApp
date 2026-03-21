@@ -172,7 +172,7 @@ const Crisis = () => {
         .from("gratitude_entries")
         .select("entry_date, items")
         .eq("user_id", userId)
-        .lt("entry_date", todayEntryDate)
+        .lte("entry_date", todayEntryDate)
         .order("entry_date", { ascending: false })
         .limit(14);
 
@@ -427,13 +427,13 @@ const Crisis = () => {
         <section className="rounded-2xl border border-border bg-card/80 p-6 shadow-sm space-y-4">
           <h2 className="text-lg font-semibold">Histórico recente</h2>
           <p className="text-sm text-muted-foreground">
-            Veja seus registros anteriores (somente leitura).
+            Veja seus registros recentes (inclui hoje).
           </p>
 
           {loadingHistory ? (
             <p className="text-sm text-muted-foreground">Carregando histórico...</p>
           ) : gratitudeHistory.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Ainda não há registros anteriores.</p>
+            <p className="text-sm text-muted-foreground">Ainda não há registros.</p>
           ) : (
             <div className="space-y-3">
               {gratitudeHistory.map((entry) => {

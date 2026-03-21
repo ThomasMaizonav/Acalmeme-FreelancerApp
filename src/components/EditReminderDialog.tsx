@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { X } from "lucide-react";
+import { Bell, X } from "lucide-react";
 
 interface Reminder {
   id: string;
@@ -16,6 +17,8 @@ interface Reminder {
   reminder_type: "medication" | "water" | "exercise" | "custom";
   days_of_week: number[];
   is_active: boolean;
+  send_email?: boolean | null;
+  send_push?: boolean | null;
   reminder_times?: { id: string; scheduled_time: string; is_active?: boolean }[];
 }
 
@@ -44,6 +47,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
     reminder_type: reminder?.reminder_type || "custom",
     scheduled_times: reminder?.reminder_times?.map((time) => time.scheduled_time) || [],
     days_of_week: reminder?.days_of_week || [0, 1, 2, 3, 4, 5, 6],
+    send_push: reminder?.send_push ?? true,
   });
   const [timeDraft, setTimeDraft] = useState("");
 
@@ -89,6 +93,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       reminder_type: reminder.reminder_type || "custom",
       scheduled_times: normalizedTimes,
       days_of_week: days.length ? days : [0, 1, 2, 3, 4, 5, 6],
+      send_push: reminder.send_push ?? true,
     });
     setTimeDraft(normalizedTimes[0] ?? "");
   }, [reminder, open]);
@@ -119,6 +124,15 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       return;
     }
 
+    if (!formData.send_push && !reminder.send_email) {
+      toast({
+        title: "Ative ao menos uma notificação",
+        description: "Escolha receber no celular e/ou por e-mail.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const days = (formData.days_of_week ?? [])
       .map((day) => Number(day))
       .filter((value) => Number.isFinite(value));
@@ -130,6 +144,7 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
         description: formData.description,
         reminder_type: formData.reminder_type,
         days_of_week: days,
+        send_push: formData.send_push,
       })
       .eq("id", reminder.id);
 
@@ -301,6 +316,25 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
                 </Button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="edit-send-push" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notificação no celular
+              </Label>
+              <Switch
+                id="edit-send-push"
+                checked={formData.send_push}
+                onCheckedChange={(checked) =>
+                  setFormData(prev => ({ ...prev, send_push: checked }))
+                }
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Receba alertas no app mesmo com a tela bloqueada.
+            </p>
           </div>
 
           <Button type="submit" className="w-full">
