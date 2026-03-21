@@ -12,8 +12,7 @@ const DURATIONS = [
   { label: "10 min", seconds: 600 },
 ];
 
-const RELAXING_MUSIC_URL =
-  "/public/meditationMusic.mp3";
+const RELAXING_MUSIC_URL = "/meditationMusic.mp3";
 
 const CalmSession = () => {
   const navigate = useNavigate();
@@ -71,6 +70,10 @@ const CalmSession = () => {
     setTimeRemaining(seconds);
     setSessionStarted(true);
     setIsPaused(false);
+    if (soundEnabled && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {});
+    }
   };
 
   const togglePause = () => {

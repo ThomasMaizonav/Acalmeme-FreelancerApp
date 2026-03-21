@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useUserProgress } from "@/hooks/useUserProgress";
+import { Capacitor } from "@capacitor/core";
 
 interface JournalEntry {
   id: string;
@@ -21,6 +22,7 @@ interface JournalEntry {
 }
 
 const JournalNew = () => {
+  const isNativeApp = Capacitor.isNativePlatform();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateProgress } = useUserProgress();
@@ -211,6 +213,9 @@ const JournalNew = () => {
                   const hasEntry = weekEntries.has(dateStr);
                   const isSelected = format(date, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
                   const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+                  const weekdayLabel = isNativeApp
+                    ? ["D", "S", "T", "Q", "Q", "S", "S"][index]
+                    : format(date, "EEE", { locale: ptBR });
 
                   return (
                     <button
@@ -225,7 +230,7 @@ const JournalNew = () => {
                       )}
                     >
                       <span className="text-xs mb-1">
-                        {format(date, "EEE", { locale: ptBR })}
+                        {weekdayLabel}
                       </span>
                       <span className="text-sm font-semibold">
                         {format(date, "d")}

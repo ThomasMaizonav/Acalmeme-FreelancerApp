@@ -12,7 +12,13 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Bell, Plus, Trash2, Edit, Mail, Pill, Droplets, Dumbbell, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EditReminderDialog } from "@/components/EditReminderDialog";
+<<<<<<< Updated upstream
 import { useUserProgress } from "@/hooks/useUserProgress";
+=======
+import { Capacitor } from "@capacitor/core";
+import type { PermissionState } from "@capacitor/core";
+import { LocalNotifications, Weekday } from "@capacitor/local-notifications";
+>>>>>>> Stashed changes
 
 interface ReminderTime {
   id: string;
@@ -55,6 +61,7 @@ const clearScheduledNotifications = () => {
 };
 
 const Reminders = () => {
+  const isNativeApp = Capacitor.isNativePlatform();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateProgress } = useUserProgress();
@@ -64,7 +71,13 @@ const Reminders = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [deleteReminderTarget, setDeleteReminderTarget] = useState<Reminder | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
+<<<<<<< Updated upstream
   const [timeDraft, setTimeDraft] = useState("");
+=======
+  const [nativeNotificationPermission, setNativeNotificationPermission] = useState<PermissionState>("prompt");
+  const [scheduledTimeouts, setScheduledTimeouts] = useState<number[]>([]);
+  const [timeDraft, setTimeDraft] = useState("08:00");
+>>>>>>> Stashed changes
 
   const [formData, setFormData] = useState({
     title: "",
@@ -105,7 +118,11 @@ const Reminders = () => {
   useEffect(() => {
     checkAuth();
     loadReminders();
-    checkNotificationPermission();
+    if (isNativeApp) {
+      checkNativeNotificationPermission();
+    } else {
+      checkNotificationPermission();
+    }
   }, []);
 
   useEffect(() => {
@@ -130,6 +147,15 @@ const Reminders = () => {
     }
   };
 
+  const checkNativeNotificationPermission = async () => {
+    try {
+      const status = await LocalNotifications.checkPermissions();
+      setNativeNotificationPermission(status.display);
+    } catch (error) {
+      console.warn("Erro ao checar permissão de notificação:", error);
+    }
+  };
+
   const requestNotificationPermission = async () => {
     if ("Notification" in window) {
       const permission = await Notification.requestPermission();
@@ -142,6 +168,27 @@ const Reminders = () => {
           description: "Você receberá lembretes nos horários configurados.",
         });
       }
+    }
+  };
+
+  const requestNativeNotificationPermission = async () => {
+    try {
+      const status = await LocalNotifications.requestPermissions();
+      setNativeNotificationPermission(status.display);
+      if (status.display === "granted") {
+        await scheduleNativeNotifications(reminders);
+        toast({
+          title: "Notificações ativadas",
+          description: "Você receberá alertas no celular nos horários configurados.",
+        });
+      }
+    } catch (error) {
+      console.warn("Erro ao solicitar permissão de notificação:", error);
+      toast({
+        title: "Permissão não concedida",
+        description: "Ative as notificações nas configurações do celular.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -171,7 +218,11 @@ const Reminders = () => {
         reminder_times: reminder.reminder_times ?? [],
       }));
       setReminders((normalized as Reminder[]) || []);
-      scheduleNotifications((normalized as Reminder[]) || []);
+      if (isNativeApp) {
+        await scheduleNativeNotifications((normalized as Reminder[]) || []);
+      } else {
+        scheduleNotifications((normalized as Reminder[]) || []);
+      }
     }
   };
 
@@ -233,6 +284,71 @@ const Reminders = () => {
     reminders.forEach(reminder => {
       reminder.reminder_times?.forEach(time => scheduleNextReminder(reminder, time));
     });
+  };
+
+  const scheduleNativeNotifications = async (reminders: Reminder[]) => {
+    try {
+      const status = await LocalNotifications.checkPermissions();
+      if (status.display !== "granted") return;
+
+      const pending = await LocalNotifications.getPending();
+      if (pending.notifications.length > 0) {
+        await LocalNotifications.cancel({ notifications: pending.notifications });
+      }
+
+      const notifications: Array<{
+        id: number;
+        title: string;
+        body: string;
+        schedule: { on: { weekday: Weekday; hour: number; minute: number }; repeats: boolean };
+        extra?: Record<string, string>;
+      }> = [];
+
+      const MAX_LOCAL_NOTIFICATIONS = 60;
+      let nextId = 1;
+
+      for (const reminder of reminders) {
+        if (!reminder.is_active) continue;
+        const days = normalizeDays(reminder.days_of_week);
+        if (days.length === 0) continue;
+
+        const times = Array.from(
+          new Set(
+            (reminder.reminder_times ?? [])
+              .filter((time) => time.is_active ?? true)
+              .map((time) => String(time.scheduled_time).slice(0, 5))
+          )
+        );
+
+        for (const day of days) {
+          const weekday = (day === 0 ? Weekday.Sunday : (day + 1)) as Weekday;
+          for (const time of times) {
+            const [hour, minute] = time.split(":").map(Number);
+            if (!Number.isFinite(hour) || !Number.isFinite(minute)) continue;
+            notifications.push({
+              id: nextId++,
+              title: reminder.title,
+              body: reminder.description || "Hora do seu lembrete!",
+              schedule: {
+                on: { weekday, hour, minute },
+                repeats: true,
+              },
+              extra: { reminder_id: reminder.id },
+            });
+
+            if (notifications.length >= MAX_LOCAL_NOTIFICATIONS) break;
+          }
+          if (notifications.length >= MAX_LOCAL_NOTIFICATIONS) break;
+        }
+        if (notifications.length >= MAX_LOCAL_NOTIFICATIONS) break;
+      }
+
+      if (notifications.length > 0) {
+        await LocalNotifications.schedule({ notifications });
+      }
+    } catch (error) {
+      console.warn("Erro ao agendar notificações locais:", error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -451,7 +567,7 @@ const Reminders = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {notificationPermission !== "granted" && (
+            {!isNativeApp && notificationPermission !== "granted" && (
               <Card className="bg-primary/10 border-primary/20">
                 <CardContent className="pt-6">
                   <p className="text-sm mb-4">
@@ -465,6 +581,20 @@ const Reminders = () => {
               </Card>
             )}
 
+            {isNativeApp && nativeNotificationPermission !== "granted" && (
+              <Card className="bg-primary/10 border-primary/20">
+                <CardContent className="pt-6">
+                  <p className="text-sm mb-4">
+                    Ative as notificações do app para receber alertas no celular.
+                  </p>
+                  <Button onClick={requestNativeNotificationPermission}>
+                    <Bell className="mr-2 h-4 w-4" />
+                    Ativar notificações do app
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full">
@@ -472,13 +602,19 @@ const Reminders = () => {
                   Novo Lembrete
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl w-full max-h-[92vh] overflow-hidden">
+              <DialogContent
+                className={
+                  isNativeApp
+                    ? "w-[95vw] max-w-[95vw] max-h-[92vh] overflow-hidden"
+                    : "max-w-2xl w-full max-h-[92vh] overflow-hidden"
+                }
+              >
                 <DialogHeader>
                   <DialogTitle>Criar Novo Lembrete</DialogTitle>
                 </DialogHeader>
                 <form
                   onSubmit={handleSubmit}
-                  className="flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-2"
+                  className="flex flex-col gap-4 max-h-[80vh] overflow-y-auto overflow-x-hidden pr-2"
                 >
                   {/* templates */}
                   <div className="flex gap-2 flex-wrap">
@@ -701,10 +837,14 @@ const Reminders = () => {
                 </p>
               ) : (
                 reminders.map((reminder) => (
-                  <Card key={reminder.id}>
+                  <Card key={reminder.id} className="overflow-hidden">
                     <CardContent className="pt-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
+                      <div
+                        className={`flex gap-4 ${
+                          isNativeApp ? "flex-col" : "items-start justify-between"
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className="font-semibold">{reminder.title}</h3>
                             <span className="text-xs px-2 py-1 rounded-full bg-primary/10">
@@ -720,8 +860,12 @@ const Reminders = () => {
                             </p>
                           )}
                           <div className="flex flex-col gap-1 text-sm">
-                            <div className="flex items-center gap-4">
-                              <span className="font-medium">
+                            <div
+                              className={`flex ${
+                                isNativeApp ? "flex-col gap-1" : "items-center gap-4 flex-wrap"
+                              }`}
+                            >
+                              <span className="font-medium break-words">
                                 {Array.from(
                                   new Set(
                                     reminder.reminder_times
@@ -732,7 +876,7 @@ const Reminders = () => {
                                   .sort()
                                   .join(" • ") || "--"}
                               </span>
-                              <span className="text-muted-foreground">
+                              <span className="text-muted-foreground break-words">
                                 {reminder.days_of_week
                                   .map(day => DAYS.find(item => item.value === day)?.label)
                                   .filter(Boolean)
@@ -747,7 +891,7 @@ const Reminders = () => {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-2 ${isNativeApp ? "self-end" : ""} shrink-0`}>
                           <Switch
                             checked={reminder.is_active}
                             onCheckedChange={() => toggleReminder(reminder.id, reminder.is_active)}

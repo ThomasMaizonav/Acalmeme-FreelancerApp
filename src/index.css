@@ -120,6 +120,15 @@ All colors MUST be HSL.
     @apply bg-background text-foreground font-['Poppins',sans-serif] antialiased;
   }
 
+  body.app-native {
+    padding-top: calc(env(safe-area-inset-top) + 12px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  }
+
+  body.app-native .min-h-screen {
+    min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold;
   }

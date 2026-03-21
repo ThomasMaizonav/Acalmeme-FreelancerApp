@@ -5,7 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PremiumGuard } from "@/components/PremiumGuard";
 import { AuthGuard } from "@/components/AuthGuard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Crisis = lazy(() => import("./pages/Crisis"));
@@ -24,6 +25,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+const isNativeApp = Capacitor.isNativePlatform();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -39,6 +41,7 @@ const App = () => (
           }
         >
           <Routes>
+<<<<<<< Updated upstream
             <Route path="/" element={<Landing />} />
             <Route
               path="/crisis"
@@ -60,6 +63,11 @@ const App = () => (
                 </AuthGuard>
               }
             />
+=======
+            <Route path="/" element={isNativeApp ? <Navigate to="/auth" replace /> : <Landing />} />
+            <Route path="/crisis" element={<Crisis />} />
+            <Route path="/calm-sessions" element={<CalmSession />} />
+>>>>>>> Stashed changes
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route
