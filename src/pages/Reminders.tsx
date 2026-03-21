@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, type PermissionState } from "@capacitor/core";
 import { LocalNotifications, type Weekday } from "@capacitor/local-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,13 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Bell, Plus, Trash2, Edit, Mail, Pill, Droplets, Dumbbell, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { EditReminderDialog } from "@/components/EditReminderDialog";
-<<<<<<< Updated upstream
 import { useUserProgress } from "@/hooks/useUserProgress";
-=======
-import { Capacitor } from "@capacitor/core";
-import type { PermissionState } from "@capacitor/core";
-import { LocalNotifications, Weekday } from "@capacitor/local-notifications";
->>>>>>> Stashed changes
 
 interface ReminderTime {
   id: string;
@@ -101,13 +95,8 @@ const Reminders = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [deleteReminderTarget, setDeleteReminderTarget] = useState<Reminder | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
-<<<<<<< Updated upstream
-  const [timeDraft, setTimeDraft] = useState("");
-=======
   const [nativeNotificationPermission, setNativeNotificationPermission] = useState<PermissionState>("prompt");
-  const [scheduledTimeouts, setScheduledTimeouts] = useState<number[]>([]);
-  const [timeDraft, setTimeDraft] = useState("08:00");
->>>>>>> Stashed changes
+  const [timeDraft, setTimeDraft] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -147,22 +136,18 @@ const Reminders = () => {
   const sortedTimes = toUniqueSortedTimes(formData.scheduled_times);
 
   useEffect(() => {
-    checkAuth();
-    loadReminders();
-<<<<<<< HEAD
-    if (isNativeApp) {
-      checkNativeNotificationPermission();
-    } else {
-      checkNotificationPermission();
-    }
-=======
+    void checkAuth();
+    void loadReminders();
     void checkNotificationPermission();
->>>>>>> e7f4f0d84fec8424892823dbff2066f04fa51bdc
   }, []);
 
   useEffect(() => {
     updateProgress();
   }, [updateProgress]);
+
+  useEffect(() => () => {
+    clearScheduledNotifications();
+  }, []);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -177,9 +162,14 @@ const Reminders = () => {
   };
 
   const checkNotificationPermission = async () => {
-    if (Capacitor.isNativePlatform()) {
-      const permission = await LocalNotifications.checkPermissions();
-      setNotificationPermission(normalizePermission(permission.display));
+    if (isNativeApp) {
+      try {
+        const permission = await LocalNotifications.checkPermissions();
+        setNativeNotificationPermission(permission.display);
+        setNotificationPermission(normalizePermission(permission.display));
+      } catch (error) {
+        console.warn("Erro ao checar permissão de notificação:", error);
+      }
       return;
     }
 
@@ -188,26 +178,33 @@ const Reminders = () => {
     }
   };
 
-  const checkNativeNotificationPermission = async () => {
-    try {
-      const status = await LocalNotifications.checkPermissions();
-      setNativeNotificationPermission(status.display);
-    } catch (error) {
-      console.warn("Erro ao checar permissão de notificação:", error);
-    }
-  };
-
   const requestNotificationPermission = async () => {
-    if (Capacitor.isNativePlatform()) {
-      const permission = await LocalNotifications.requestPermissions();
-      const normalized = normalizePermission(permission.display);
-      setNotificationPermission(normalized);
+    if (isNativeApp) {
+      try {
+        const permission = await LocalNotifications.requestPermissions();
+        setNativeNotificationPermission(permission.display);
+        const normalized = normalizePermission(permission.display);
+        setNotificationPermission(normalized);
 
-      if (normalized === "granted") {
-        await scheduleNotifications(reminders);
+        if (normalized === "granted") {
+          await scheduleNotifications(reminders);
+          toast({
+            title: "Notificações ativadas",
+            description: "Você receberá alertas no celular nos horários configurados.",
+          });
+        } else {
+          toast({
+            title: "Permissão não concedida",
+            description: "Ative as notificações nas configurações do celular.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.warn("Erro ao solicitar permissão de notificação:", error);
         toast({
-          title: "Notificações ativadas",
-          description: "Você receberá lembretes nos horários configurados.",
+          title: "Permissão não concedida",
+          description: "Ative as notificações nas configurações do celular.",
+          variant: "destructive",
         });
       }
       return;
@@ -224,27 +221,6 @@ const Reminders = () => {
           description: "Você receberá lembretes nos horários configurados.",
         });
       }
-    }
-  };
-
-  const requestNativeNotificationPermission = async () => {
-    try {
-      const status = await LocalNotifications.requestPermissions();
-      setNativeNotificationPermission(status.display);
-      if (status.display === "granted") {
-        await scheduleNativeNotifications(reminders);
-        toast({
-          title: "Notificações ativadas",
-          description: "Você receberá alertas no celular nos horários configurados.",
-        });
-      }
-    } catch (error) {
-      console.warn("Erro ao solicitar permissão de notificação:", error);
-      toast({
-        title: "Permissão não concedida",
-        description: "Ative as notificações nas configurações do celular.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -272,17 +248,9 @@ const Reminders = () => {
         ...reminder,
         days_of_week: normalizeDays(reminder.days_of_week),
         reminder_times: reminder.reminder_times ?? [],
-      }));
-      setReminders((normalized as Reminder[]) || []);
-<<<<<<< HEAD
-      if (isNativeApp) {
-        await scheduleNativeNotifications((normalized as Reminder[]) || []);
-      } else {
-        scheduleNotifications((normalized as Reminder[]) || []);
-      }
-=======
-      void scheduleNotifications((normalized as Reminder[]) || []);
->>>>>>> e7f4f0d84fec8424892823dbff2066f04fa51bdc
+      })) as Reminder[];
+      setReminders(normalized);
+      await scheduleNotifications(normalized);
     }
   };
 
@@ -338,7 +306,7 @@ const Reminders = () => {
   };
 
   const scheduleNotifications = async (reminders: Reminder[]) => {
-    if (Capacitor.isNativePlatform()) {
+    if (isNativeApp) {
       const permission = await LocalNotifications.checkPermissions();
       if (normalizePermission(permission.display) !== "granted") return;
 
@@ -415,71 +383,6 @@ const Reminders = () => {
       if (reminder.send_push === false) return;
       reminder.reminder_times?.forEach(time => scheduleNextReminder(reminder, time));
     });
-  };
-
-  const scheduleNativeNotifications = async (reminders: Reminder[]) => {
-    try {
-      const status = await LocalNotifications.checkPermissions();
-      if (status.display !== "granted") return;
-
-      const pending = await LocalNotifications.getPending();
-      if (pending.notifications.length > 0) {
-        await LocalNotifications.cancel({ notifications: pending.notifications });
-      }
-
-      const notifications: Array<{
-        id: number;
-        title: string;
-        body: string;
-        schedule: { on: { weekday: Weekday; hour: number; minute: number }; repeats: boolean };
-        extra?: Record<string, string>;
-      }> = [];
-
-      const MAX_LOCAL_NOTIFICATIONS = 60;
-      let nextId = 1;
-
-      for (const reminder of reminders) {
-        if (!reminder.is_active) continue;
-        const days = normalizeDays(reminder.days_of_week);
-        if (days.length === 0) continue;
-
-        const times = Array.from(
-          new Set(
-            (reminder.reminder_times ?? [])
-              .filter((time) => time.is_active ?? true)
-              .map((time) => String(time.scheduled_time).slice(0, 5))
-          )
-        );
-
-        for (const day of days) {
-          const weekday = (day === 0 ? Weekday.Sunday : (day + 1)) as Weekday;
-          for (const time of times) {
-            const [hour, minute] = time.split(":").map(Number);
-            if (!Number.isFinite(hour) || !Number.isFinite(minute)) continue;
-            notifications.push({
-              id: nextId++,
-              title: reminder.title,
-              body: reminder.description || "Hora do seu lembrete!",
-              schedule: {
-                on: { weekday, hour, minute },
-                repeats: true,
-              },
-              extra: { reminder_id: reminder.id },
-            });
-
-            if (notifications.length >= MAX_LOCAL_NOTIFICATIONS) break;
-          }
-          if (notifications.length >= MAX_LOCAL_NOTIFICATIONS) break;
-        }
-        if (notifications.length >= MAX_LOCAL_NOTIFICATIONS) break;
-      }
-
-      if (notifications.length > 0) {
-        await LocalNotifications.schedule({ notifications });
-      }
-    } catch (error) {
-      console.warn("Erro ao agendar notificações locais:", error);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -735,7 +638,7 @@ const Reminders = () => {
                   <p className="text-sm mb-4">
                     Ative as notificações do app para receber alertas no celular.
                   </p>
-                  <Button onClick={requestNativeNotificationPermission}>
+                  <Button onClick={requestNotificationPermission}>
                     <Bell className="mr-2 h-4 w-4" />
                     Ativar notificações do app
                   </Button>

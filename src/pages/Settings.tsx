@@ -100,10 +100,11 @@ const Settings = () => {
         .from("profiles")
         .upsert({
           id: user.id,
+          user_id: user.id,
           full_name: fullName,
           email: email,
           updated_at: new Date().toISOString(),
-        });
+        }, { onConflict: "id" });
 
       if (error) throw error;
 

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import logoAcalmeme from "@/assets/logo-acalmeme.png";
@@ -45,13 +46,31 @@ const Auth = () => {
     confirmPassword: "",
   });
 
-  const syncProfileEmail = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.email) {
-      await supabase
-        .from("profiles")
-        .update({ email: user.email })
-        .eq("id", user.id);
+  const syncProfileFromUser = async (user: SupabaseUser | null | undefined) => {
+    if (!user?.email) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: user.id,
+          user_id: user.id,
+          email: user.email,
+          full_name:
+            typeof user.user_metadata?.full_name === "string"
+              ? user.user_metadata.full_name
+              : null,
+          phone:
+            typeof user.user_metadata?.phone === "string"
+              ? user.user_metadata.phone
+              : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" },
+      );
+
+    if (error) {
+      console.warn("Erro ao sincronizar perfil:", error);
     }
   };
 
@@ -85,7 +104,7 @@ const Auth = () => {
         setIsRecoveryMode(true);
       }
       if (event === "SIGNED_IN") {
-        syncProfileEmail();
+        void supabase.auth.getUser().then(({ data }) => syncProfileFromUser(data.user));
       }
     });
 
@@ -167,6 +186,9 @@ const Auth = () => {
         });
         if (error) throw error;
         if (data.user) {
+          if (data.session?.user) {
+            await syncProfileFromUser(data.user);
+          }
           await logAuthEvent(data.user.id, 'signup');
           toast({
             title: "Conta criada com sucesso!",

@@ -133,6 +133,7 @@ export type Database = {
           phone: string | null
           timezone: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -144,6 +145,7 @@ export type Database = {
           phone?: string | null
           timezone?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -155,6 +157,7 @@ export type Database = {
           phone?: string | null
           timezone?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

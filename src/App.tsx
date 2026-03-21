@@ -41,8 +41,7 @@ const App = () => (
           }
         >
           <Routes>
-<<<<<<< Updated upstream
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={isNativeApp ? <Navigate to="/auth" replace /> : <Landing />} />
             <Route
               path="/crisis"
               element={
@@ -63,11 +62,6 @@ const App = () => (
                 </AuthGuard>
               }
             />
-=======
-            <Route path="/" element={isNativeApp ? <Navigate to="/auth" replace /> : <Landing />} />
-            <Route path="/crisis" element={<Crisis />} />
-            <Route path="/calm-sessions" element={<CalmSession />} />
->>>>>>> Stashed changes
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route
