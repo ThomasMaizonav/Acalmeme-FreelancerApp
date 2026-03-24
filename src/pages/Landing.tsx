@@ -10,7 +10,6 @@ import {
   Sun,
   Moon,
   Pill,
-  Bell,
   Book,
   Heart,
   Wind,
@@ -77,7 +76,7 @@ const Landing = () => {
       id: "1",
       question: "O que é o AcalmeMe?",
       answer:
-        "O AcalmeMe é um aplicativo completo para gerenciar seus medicamentos com lembretes inteligentes. Além disso, oferece bônus exclusivos como diário emocional, sessões de calma e exercícios de respiração para cuidar da sua saúde mental.",
+        "O AcalmeMe é um app criado para ajudar quem entra em crise de ansiedade no trabalho e precisa se reorganizar rápido. Em vez de ser um app genérico de bem-estar, ele te coloca direto em um protocolo de 3 minutos com respiração guiada e foco prático. Como bônus, você ainda tem lembretes de medicação, diário emocional e sessões de calma.",
     },
     {
       id: "2",
@@ -87,21 +86,21 @@ const Landing = () => {
     },
     {
       id: "3",
-      question: "Funciona bem para idosos e pessoas com vários remédios?",
+      question: "Funciona em uma crise de ansiedade de verdade?",
       answer:
-        "Sim! Você pode cadastrar vários medicamentos, com doses, horários e observações. Os lembretes são claros e você recebe notificações no app e por e-mail — ideal para idosos, doenças crônicas e cuidadores.",
+        "O foco do app é te ajudar no pico da ansiedade com um passo a passo curto e direto, pensado para momentos em que você precisa voltar ao controle sem sair totalmente da rotina. Ele não substitui terapia ou atendimento médico, mas funciona como apoio imediato.",
     },
     {
       id: "4",
-      question: "Vou receber notificações mesmo com o app fechado?",
+      question: "Dá para usar no trabalho sem chamar atenção?",
       answer:
-        "Sim! O AcalmeMe envia notificações no navegador e também por e-mail (se você ativar), para garantir que você nunca esqueça seus medicamentos.",
+        "Sim. O fluxo foi pensado para ser rápido, discreto e direto ao ponto. Você consegue usar no celular ou navegador em uma pausa curta, antes de reunião, no banheiro, no elevador ou na própria mesa.",
     },
     {
       id: "5",
-      question: "Quais são os bônus incluídos?",
+      question: "Tem lembrete de medicação e outros bônus?",
       answer:
-        "Além dos lembretes de medicamentos, você ganha acesso a: Diário Emocional para registrar seus sentimentos, Sessões de Calma com músicas relaxantes, Modo Crise para momentos difíceis e sistema de recompensas por uso diário.",
+        "Sim. Os bônus incluem lembretes de medicação por app e e-mail, diário emocional para rastrear gatilhos e sessões de calma de 1, 3, 5 ou 10 minutos para prevenir que a ansiedade escale.",
     },
   ];
 
@@ -132,7 +131,7 @@ const Landing = () => {
                 AcalmeMe
               </span>
               <span className="text-[11px] text-muted-foreground">
-                Lembretes de medicação + bem-estar
+                Crise de ansiedade no trabalho
               </span>
             </div>
           </div>
@@ -207,17 +206,19 @@ const Landing = () => {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-xs sm:text-sm text-primary mb-6">
                 <Sparkles className="w-4 h-4" />
-                <span className="font-medium">30 dias grátis • sem cartão</span>
+                <span className="font-medium">Protocolo de 3 minutos • 30 dias grátis</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight mb-4">
-                Nunca mais esqueça seus
-                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> medicamentos</span>
+                Pare a crise de ansiedade em
+                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> 3 minutos</span>,
+                mesmo no trabalho
               </h1>
 
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8 max-w-xl">
-                Receba lembretes no app e por e-mail. Organize horários, doses e 
-                ainda ganhe acesso a ferramentas de bem-estar como bônus.
+                Abra o app, siga a respiração guiada e saia do pico da ansiedade sem
+                depender de força de vontade. E ainda leve bônus como lembretes de
+                medicação, diário emocional e sessões rápidas de calma.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -227,23 +228,23 @@ const Landing = () => {
                   className="w-full sm:w-auto sm:min-w-64 text-base py-6"
                   onClick={() => navigate("/auth")}
                 >
-                  <Pill className="w-5 h-5 mr-2" />
-                  Começar meus 30 dias grátis
+                  <Wind className="w-5 h-5 mr-2" />
+                  Começar meu protocolo grátis
                 </Button>
               </div>
 
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  <span>Lembretes por e-mail</span>
+                  <span>Modo crise guiado</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  <span>Notificações no app</span>
+                  <span>Uso discreto no trabalho</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
-                  <span>Cancele quando quiser</span>
+                  <span>Bônus: lembretes de medicação</span>
                 </div>
               </div>
             </div>
@@ -256,60 +257,60 @@ const Landing = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-gradient-hero flex items-center justify-center">
-                        <Bell className="w-5 h-5 text-white" />
+                        <Heart className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold">Seus lembretes</span>
+                        <span className="text-sm font-semibold">Modo crise no trabalho</span>
                         <span className="text-xs text-muted-foreground">
-                          Hoje • 21:30
+                          Agora • protocolo de 3 min
                         </span>
                       </div>
                     </div>
                     <span className="text-xs text-primary font-semibold px-2 py-1 bg-primary/10 rounded-full">
-                      3 pendentes
+                      em andamento
                     </span>
                   </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between rounded-2xl bg-primary/10 px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="font-semibold">Losartana 50mg</span>
+                        <span className="font-semibold">Respiração guiada</span>
                         <span className="text-xs text-muted-foreground">
-                          1 comprimido • Pressão alta
+                          60 segundos para baixar o pico da ansiedade
                         </span>
                       </div>
                       <span className="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground font-medium">
-                        21:30
+                        01:00
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between rounded-2xl bg-muted px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="font-semibold">Metformina 850mg</span>
+                        <span className="font-semibold">Aterramento rápido</span>
                         <span className="text-xs text-muted-foreground">
-                          Tomar após o almoço
+                          Volte para o presente sem sair do ambiente
                         </span>
                       </div>
                       <span className="text-xs px-3 py-1.5 rounded-full bg-muted-foreground/10 text-muted-foreground">
-                        13:00
+                        02:00
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between rounded-2xl bg-muted px-4 py-3">
                       <div className="flex flex-col">
-                        <span className="font-semibold">Vitamina D</span>
+                        <span className="font-semibold">Bônus: lembrete de medicação</span>
                         <span className="text-xs text-muted-foreground">
-                          1 cápsula pela manhã
+                          Sertralina 50mg • amanhã às 08:00
                         </span>
                       </div>
                       <span className="text-xs px-3 py-1.5 rounded-full bg-muted-foreground/10 text-muted-foreground">
-                        08:00
+                        ativo
                       </span>
                     </div>
                   </div>
 
                   <div className="rounded-2xl border border-dashed border-primary/40 px-4 py-3 text-xs text-muted-foreground text-center">
-                    Receba lembretes por e-mail e notificação 🔔
+                    Abra, respire, recupere o controle e volte para o trabalho
                   </div>
                 </div>
               </div>
@@ -317,44 +318,45 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* MAIN FEATURE - LEMBRETES */}
+        {/* MAIN FEATURE */}
         <section className="px-4 sm:px-6 pb-16 sm:pb-20">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-xs font-medium text-primary mb-4">
-                <Pill className="w-4 h-4" />
+                <Heart className="w-4 h-4" />
                 FUNÇÃO PRINCIPAL
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Lembretes de medicação inteligentes
+                Seu protocolo rápido para crises de ansiedade no trabalho
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Configure seus horários uma vez e nunca mais esqueça um remédio.
-                Receba alertas no navegador e por e-mail.
+                Quando a ansiedade dispara, você não precisa escolher entre sumir do
+                expediente ou fingir que está tudo bem. O AcalmeMe te conduz por um
+                fluxo curto para reduzir o pico e recuperar o foco.
               </p>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 {
-                  icon: Bell,
-                  title: "Notificações push",
-                  desc: "Alertas no navegador nos horários exatos"
+                  icon: Heart,
+                  title: "Acesso imediato",
+                  desc: "Entrou em crise? Abra e comece sem configurar nada"
                 },
                 {
-                  icon: Pill,
-                  title: "E-mail backup",
-                  desc: "Receba também por e-mail para não perder"
+                  icon: Wind,
+                  title: "Respiração guiada",
+                  desc: "Passos visuais e simples para baixar a ativação"
                 },
                 {
                   icon: Smartphone,
-                  title: "Multi-dispositivo",
-                  desc: "Acesse de qualquer lugar com internet"
+                  title: "Discreto no expediente",
+                  desc: "Use no celular em uma pausa curta, sem exposição"
                 },
                 {
                   icon: CheckCircle2,
-                  title: "Histórico completo",
-                  desc: "Registre o que tomou para acompanhamento"
+                  title: "Volta ao foco",
+                  desc: "Feche o protocolo com orientação prática para retomar a tarefa"
                 },
               ].map((item, idx) => (
                 <div
@@ -381,45 +383,45 @@ const Landing = () => {
                 BÔNUS INCLUÍDOS
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Cuide também da sua saúde mental
+                O app vai além da crise, mas sem perder o foco
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Além dos lembretes, você ganha acesso a ferramentas de bem-estar 
-                para completar seu autocuidado.
+                A proposta principal é te ajudar na hora do aperto. Como
+                complemento, você também acompanha sua rotina e reduz novos gatilhos.
               </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
               <div className="rounded-3xl border border-border bg-card p-8 hover:shadow-lg transition-all group">
                 <div className="w-14 h-14 rounded-2xl bg-secondary/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Book className="w-7 h-7 text-secondary" />
+                  <Pill className="w-7 h-7 text-secondary" />
                 </div>
-                <h3 className="text-xl font-bold mb-3">Diário Emocional</h3>
+                <h3 className="text-xl font-bold mb-3">Lembretes de Medicação</h3>
                 <p className="text-muted-foreground">
-                  Registre seus sentimentos diariamente e acompanhe seu bem-estar 
-                  emocional ao longo do tempo.
+                  Receba alertas no app e por e-mail para não esquecer antidepressivos,
+                  ansiolíticos ou outros remédios da sua rotina.
                 </p>
               </div>
 
               <div className="rounded-3xl border border-border bg-card p-8 hover:shadow-lg transition-all group">
                 <div className="w-14 h-14 rounded-2xl bg-accent/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Wind className="w-7 h-7 text-accent" />
+                  <Book className="w-7 h-7 text-accent" />
                 </div>
-                <h3 className="text-xl font-bold mb-3">Sessões de Calma</h3>
+                <h3 className="text-xl font-bold mb-3">Diário Emocional</h3>
                 <p className="text-muted-foreground">
-                  Exercícios de respiração com música relaxante. Escolha 1, 3, 5 ou 
-                  10 minutos para acalmar sua mente.
+                  Registre gatilhos, sintomas e dias mais difíceis para entender o
+                  que mais pesa na sua rotina.
                 </p>
               </div>
 
               <div className="rounded-3xl border border-border bg-card p-8 hover:shadow-lg transition-all group">
                 <div className="w-14 h-14 rounded-2xl bg-destructive/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Heart className="w-7 h-7 text-destructive" />
+                  <Wind className="w-7 h-7 text-destructive" />
                 </div>
-                <h3 className="text-xl font-bold mb-3">Modo Crise</h3>
+                <h3 className="text-xl font-bold mb-3">Sessões de Calma</h3>
                 <p className="text-muted-foreground">
-                  Para momentos difíceis: exercícios guiados de respiração para 
-                  ajudar você a se acalmar rapidamente.
+                  Faça práticas de 1, 3, 5 ou 10 minutos para evitar que a ansiedade
+                  vá se acumulando ao longo do dia.
                 </p>
               </div>
             </div>
@@ -431,37 +433,37 @@ const Landing = () => {
           <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 items-center">
             <div>
               <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                Feito especialmente para você
+                Feito para quem precisa se recompor rápido no expediente
               </h2>
               <p className="text-muted-foreground mb-8 max-w-lg">
-                O AcalmeMe foi criado para quem não pode se dar ao luxo de 
-                esquecer um medicamento — seja por idade, rotina corrida ou 
-                tratamento contínuo.
+                Se sua ansiedade aperta antes de reunião, apresentação, cobrança ou
+                excesso de estímulo, o AcalmeMe foi desenhado para esse contexto
+                real: pouco tempo, pouco espaço e zero margem para travar.
               </p>
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-border p-4">
-                  <p className="font-semibold mb-1">Idosos</p>
+                  <p className="font-semibold mb-1">Antes de reuniões</p>
                   <p className="text-sm text-muted-foreground">
-                    Lembretes claros e notificações por e-mail
+                    Para baixar a ativação sem desaparecer por meia hora
                   </p>
                 </div>
                 <div className="rounded-2xl border border-border p-4">
-                  <p className="font-semibold mb-1">Doenças crônicas</p>
+                  <p className="font-semibold mb-1">Picos de cobrança</p>
                   <p className="text-sm text-muted-foreground">
-                    Hipertensão, diabetes, ansiedade e mais
+                    Quando o coração acelera, a mão sua e a mente trava
                   </p>
                 </div>
                 <div className="rounded-2xl border border-border p-4">
-                  <p className="font-semibold mb-1">Cuidadores</p>
+                  <p className="font-semibold mb-1">Quem já faz tratamento</p>
                   <p className="text-sm text-muted-foreground">
-                    Organize a medicação de quem você cuida
+                    Use com lembretes de medicação e apoio complementar
                   </p>
                 </div>
                 <div className="rounded-2xl border border-border p-4">
                   <p className="font-semibold mb-1">Rotina corrida</p>
                   <p className="text-sm text-muted-foreground">
-                    Deixe o app lembrar por você
+                    Tenha um recurso prático no bolso para usar rápido
                   </p>
                 </div>
               </div>
@@ -523,18 +525,18 @@ const Landing = () => {
         <section className="px-4 sm:px-6 pb-20 sm:pb-24">
           <div className="max-w-4xl mx-auto text-center rounded-3xl bg-gradient-hero text-white shadow-lg px-8 sm:px-12 py-12 sm:py-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Comece hoje mesmo, é grátis!
+              Tenha um plano de 3 minutos para quando a ansiedade bater no trabalho
             </h2>
             <p className="text-white/90 mb-8 max-w-lg mx-auto">
-              30 dias para testar tudo sem compromisso. Depois, apenas R$ 9,90/mês.
-              Cancele quando quiser.
+              Teste por 30 dias sem cartão. Se fizer sentido, continue por apenas
+              R$ 9,90/mês com lembretes de medicação e ferramentas extras incluídas.
             </p>
             <Button
               size="lg"
               className="bg-white text-primary hover:bg-white/90 text-base py-6 px-8"
               onClick={() => navigate("/auth")}
             >
-              <Pill className="w-5 h-5 mr-2" />
+              <Wind className="w-5 h-5 mr-2" />
               Criar minha conta grátis
             </Button>
             <p className="text-white/70 text-sm mt-4">
