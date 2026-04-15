@@ -178,13 +178,6 @@ const Plans = () => {
                   <span>{text({ pt: "Sessão de calma básica", en: "Basic calm session" })}</span>
                 </li>
               </ul>
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => navigate('/auth')}
-              >
-                {text({ pt: "Começar Grátis", en: "Start Free" })}
-              </Button>
             </CardContent>
           </Card>
 

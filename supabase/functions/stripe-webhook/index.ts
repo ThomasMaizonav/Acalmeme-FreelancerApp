@@ -54,9 +54,13 @@ Deno.serve(async (req) => {
   const signature = req.headers.get("stripe-signature") ?? "";
   const payload = await req.text();
 
+  if (!signature) {
+    return json(400, { error: "Missing stripe-signature header" });
+  }
+
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
+    event = await stripe.webhooks.constructEventAsync(
       payload,
       signature,
       STRIPE_WEBHOOK_SECRET,

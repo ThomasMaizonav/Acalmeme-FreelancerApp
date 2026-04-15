@@ -36,15 +36,29 @@ const PaymentSuccess = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted flex items-center justify-center px-6 text-center">
-      <p className="text-xl sm:text-2xl font-semibold">
-        {text({
-          pt: `Você está sendo redirecionado para a página principal em ${Math.max(
-            secondsLeft,
-            0,
-          )}...`,
-          en: `You are being redirected to the main page in ${Math.max(secondsLeft, 0)}...`,
-        })}
-      </p>
+      <div className="max-w-2xl">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-4">
+          {text({
+            pt: "Parabéns! Seu pagamento foi confirmado.",
+            en: "Congratulations! Your payment has been confirmed.",
+          })}
+        </h1>
+        <p className="text-base sm:text-lg text-muted-foreground mb-6">
+          {text({
+            pt: "Sua assinatura Premium está ativa e seu acesso já foi liberado.",
+            en: "Your Premium subscription is active and your access has already been unlocked.",
+          })}
+        </p>
+        <p className="text-xl sm:text-2xl font-semibold">
+          {text({
+            pt: `Você está sendo redirecionado para a página principal em ${Math.max(
+              secondsLeft,
+              0,
+            )}...`,
+            en: `You are being redirected to the main page in ${Math.max(secondsLeft, 0)}...`,
+          })}
+        </p>
+      </div>
     </div>
   );
 };
