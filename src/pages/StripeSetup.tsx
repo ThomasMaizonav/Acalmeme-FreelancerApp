@@ -3,6 +3,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
 const StripeSetup = () => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
+  const webhookUrl = supabaseUrl
+    ? `${supabaseUrl}/functions/v1/stripe-webhook`
+    : "https://SEU-PROJETO.supabase.co/functions/v1/stripe-webhook";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-8">
       <div className="container mx-auto max-w-4xl">
@@ -46,6 +51,7 @@ const StripeSetup = () => {
                 <li>Modelo de preço: "Recorrente"</li>
                 <li>Valor: R$ 9,90</li>
                 <li>Frequência de cobrança: Mensal</li>
+                <li>Período de teste: 30 dias (defina no preço ou usando STRIPE_TRIAL_DAYS=30)</li>
                 <li>Clique em "Salvar preço"</li>
                 <li>Copie o ID do preço (começa com "price_")</li>
               </ol>
@@ -63,16 +69,17 @@ const StripeSetup = () => {
               <ol className="list-decimal list-inside space-y-2">
                 <li>Acesse <a href="https://dashboard.stripe.com/test/webhooks" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Stripe Dashboard - Webhooks</a></li>
                 <li>Clique em "Adicionar endpoint"</li>
-                <li>URL do endpoint: <code className="bg-muted px-2 py-1 rounded">https://tnknmeojdskdpmqcftwk.supabase.co/functions/v1/stripe-webhook</code></li>
+                <li>URL do endpoint: <code className="bg-muted px-2 py-1 rounded">{webhookUrl}</code></li>
                 <li>Selecione os eventos:
                   <ul className="list-disc list-inside ml-4 mt-2">
                     <li>checkout.session.completed</li>
+                    <li>customer.subscription.created</li>
                     <li>customer.subscription.updated</li>
                     <li>customer.subscription.deleted</li>
                   </ul>
                 </li>
                 <li>Clique em "Adicionar endpoint"</li>
-                <li>Copie o "Signing secret" (começa com "whsec_")</li>
+                <li>Copie o "Signing secret" (começa com "whsec_F4CQ7nh2X4EiOYK0IPUzHsnqNReFYGFQ")</li>
               </ol>
             </CardContent>
           </Card>

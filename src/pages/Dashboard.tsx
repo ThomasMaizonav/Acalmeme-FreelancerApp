@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import logoAcalmeme from "@/assets/logo-acalmeme.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLanguage } from "@/i18n/language";
+import { Capacitor } from "@capacitor/core";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const Dashboard = () => {
   const [progressUpdated, setProgressUpdated] = useState(false);
   const [userName, setUserName] = useState("");
   const { text } = useLanguage();
+  const isNativeApp = Capacitor.isNativePlatform();
 
   useEffect(() => {
     checkAdminStatus();
@@ -260,7 +262,9 @@ const Dashboard = () => {
                   })}
                 </p>
                 <Button variant="premium" onClick={() => navigate("/plans")}>
-                  {text({ pt: "Ver planos", en: "See plans" })}
+                  {isNativeApp
+                    ? text({ pt: "Ver assinatura", en: "View subscription" })
+                    : text({ pt: "Ver planos", en: "See plans" })}
                 </Button>
               </div>
             </div>
@@ -280,7 +284,9 @@ const Dashboard = () => {
                   })}
                 </p>
                 <Button variant="premium" onClick={() => navigate("/plans")}>
-                  {text({ pt: "Assinar agora", en: "Subscribe now" })}
+                  {isNativeApp
+                    ? text({ pt: "Ver assinatura", en: "View subscription" })
+                    : text({ pt: "Assinar agora", en: "Subscribe now" })}
                 </Button>
               </div>
             </div>

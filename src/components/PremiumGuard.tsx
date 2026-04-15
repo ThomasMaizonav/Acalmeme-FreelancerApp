@@ -5,6 +5,7 @@ import { Crown, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFreeTrialStatus } from "@/hooks/useFreeTrialStatus";
 import { type LocalizedText, useLanguage } from "@/i18n/language";
+import { Capacitor } from "@capacitor/core";
 
 interface PremiumGuardProps {
   children: ReactNode;
@@ -19,6 +20,7 @@ export const PremiumGuard = ({
   const navigate = useNavigate();
   const { text } = useLanguage();
   const featureText = text(feature);
+  const isNativeApp = Capacitor.isNativePlatform();
 
   if (isLoading) {
     return (
@@ -79,9 +81,11 @@ export const PremiumGuard = ({
               onClick={() => navigate("/plans")}
             >
               <Crown className="w-5 h-5 mr-2" />
-              {isInFreeTrial
-                ? text({ pt: "Assinar Agora", en: "Subscribe Now" })
-                : text({ pt: "Começar 30 Dias Grátis", en: "Start 30 Free Days" })}
+              {isNativeApp
+                ? text({ pt: "Ver assinatura", en: "View subscription" })
+                : isInFreeTrial
+                  ? text({ pt: "Assinar Agora", en: "Subscribe Now" })
+                  : text({ pt: "Começar 30 Dias Grátis", en: "Start 30 Free Days" })}
             </Button>
             <Button
               variant="outline"

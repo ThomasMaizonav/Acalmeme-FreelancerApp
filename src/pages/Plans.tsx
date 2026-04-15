@@ -8,12 +8,14 @@ import { useToast } from "@/hooks/use-toast";
 import logoAcalmeme from "@/assets/logo-acalmeme.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLanguage } from "@/i18n/language";
+import { Capacitor } from "@capacitor/core";
 
 const Plans = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { text, isEnglish } = useLanguage();
+  const isNativeApp = Capacitor.isNativePlatform();
 
   const handleSubscribe = async () => {
     try {
@@ -25,9 +27,21 @@ const Plans = () => {
         navigate("/auth");
         return;
       }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast({
+          title: text({ pt: "Sessão expirada", en: "Session expired" }),
+          description: text({
+            pt: "Faça login novamente para continuar com a assinatura.",
+            en: "Please sign in again to continue with your subscription.",
+          }),
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
 
       const priceId = import.meta.env.VITE_STRIPE_PRICE_ID;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
       if (!priceId) {
         toast({
@@ -38,51 +52,54 @@ const Plans = () => {
         return;
       }
 
-      if (!supabaseKey) {
+      if (isNativeApp) {
         toast({
-          title: text({ pt: "Erro de configuração", en: "Configuration error" }),
+          title: text({ pt: "Assinatura no app em preparação", en: "In-app subscription in progress" }),
           description: text({
-            pt: "VITE_SUPABASE_PUBLISHABLE_KEY não definido.",
-            en: "VITE_SUPABASE_PUBLISHABLE_KEY is not defined.",
+            pt: "A cobrança no app móvel será feita via App Store / Google Play.",
+            en: "Mobile billing will be handled via App Store / Google Play.",
           }),
-          variant: "destructive",
         });
         return;
       }
 
-      const endpoint =
-        "https://zdegrjywuybymohxtfxy.supabase.co/functions/v1/create-checkout-session";
-
-      const response = await fetch(endpoint, {
-        method: "POST",
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
         headers: {
-          "Content-Type": "application/json",
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
+        body: {
           priceId,
-          userId: user.id,
           email: user.email,
+          userId: user.id,
+          trialDays: 30,
+          origin: window.location.origin,
           successUrl: `${window.location.origin}/payment-success`,
           cancelUrl: `${window.location.origin}/plans`,
-        }),
+        },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (error) {
         console.error("Checkout error:", data);
+        if (
+          data?.error === "Authentication required" ||
+          data?.error === "Invalid userId for authenticated session"
+        ) {
+          await supabase.auth.signOut();
+          navigate("/auth");
+        }
         toast({
           title: text({ pt: "Erro", en: "Error" }),
-          description: data?.error || text({ pt: "Erro ao criar sessão do checkout.", en: "Failed to create checkout session." }),
+          description:
+            data?.error ||
+            error.message ||
+            text({ pt: "Erro ao criar sessão do checkout.", en: "Failed to create checkout session." }),
           variant: "destructive",
         });
         return;
       }
 
       if (data?.url) {
-        window.location.href = data.url;
+        window.location.assign(data.url);
         return;
       }
 
@@ -199,6 +216,12 @@ const Plans = () => {
                 <span className="text-4xl font-bold">R$ 9,90</span>
                 <span className="text-muted-foreground">{isEnglish ? "/month" : "/mês"}</span>
               </div>
+              <p className="text-sm text-primary font-medium mt-2">
+                {text({
+                  pt: "30 dias grátis após confirmar o cartão",
+                  en: "30 free days after card confirmation",
+                })}
+              </p>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3 mb-6">
@@ -234,15 +257,22 @@ const Plans = () => {
               <Button 
                 className="w-full bg-gradient-hero text-white hover:opacity-90 text-base py-6"
                 onClick={handleSubscribe}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isNativeApp}
               >
                 <CreditCard className="w-5 h-5 mr-2" />
-                {isSubmitting
-                  ? text({ pt: "Carregando...", en: "Loading..." })
-                  : text({ pt: "Assinar Agora", en: "Subscribe Now" })}
+                {isNativeApp
+                  ? text({ pt: "Disponível via loja em breve", en: "Store billing coming soon" })
+                  : isSubmitting
+                    ? text({ pt: "Carregando...", en: "Loading..." })
+                    : text({ pt: "Assinar Agora", en: "Subscribe Now" })}
               </Button>
               <p className="text-xs text-muted-foreground text-center mt-4">
-                {text({ pt: "Cancele a qualquer momento. Sem multas.", en: "Cancel anytime. No fees." })}
+                {isNativeApp
+                  ? text({
+                      pt: "Para publicação móvel, pagamentos serão processados pela App Store / Google Play.",
+                      en: "For mobile store release, payments will be handled by App Store / Google Play.",
+                    })
+                  : text({ pt: "Cancele a qualquer momento. Sem multas.", en: "Cancel anytime. No fees." })}
               </p>
             </CardContent>
           </Card>
@@ -257,7 +287,11 @@ const Plans = () => {
             </div>
             <div className="flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-primary" />
-              <span>{text({ pt: "Processado por Stripe", en: "Processed by Stripe" })}</span>
+              <span>
+                {isNativeApp
+                  ? text({ pt: "Pagamento via App Store / Google Play", en: "Payment via App Store / Google Play" })
+                  : text({ pt: "Processado por Stripe", en: "Processed by Stripe" })}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-primary" />
