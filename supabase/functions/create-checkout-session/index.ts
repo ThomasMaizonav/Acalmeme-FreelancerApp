@@ -73,7 +73,9 @@ Deno.serve(async (req) => {
       return json({ error: "Invalid userId for authenticated session" }, 403);
     }
 
-    const priceId: string = body.priceId || DEFAULT_PRICE_ID;
+    const requestedPriceId =
+      typeof body.priceId === "string" ? body.priceId : "";
+    const priceId: string = DEFAULT_PRICE_ID || requestedPriceId;
     const userId = authenticatedUserId;
     const email: string = body.email || authenticatedEmail;
     const trialDaysInput = Number.parseInt(
@@ -89,8 +91,14 @@ Deno.serve(async (req) => {
     const successUrl: string = body.successUrl || `${origin}/payment-success`;
     const cancelUrl: string = body.cancelUrl || `${origin}/plans`;
 
+    if (DEFAULT_PRICE_ID && requestedPriceId && requestedPriceId !== DEFAULT_PRICE_ID) {
+      console.warn(
+        `Ignoring client priceId ${requestedPriceId}. Using server STRIPE_PRICE_ID ${DEFAULT_PRICE_ID}.`,
+      );
+    }
+
     if (!priceId) {
-      return json({ error: "Missing priceId" }, 400);
+      return json({ error: "Missing STRIPE_PRICE_ID secret in function config" }, 400);
     }
 
     const stripe = new Stripe(STRIPE_SECRET_KEY, {

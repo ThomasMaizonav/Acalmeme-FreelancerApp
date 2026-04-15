@@ -41,17 +41,6 @@ const Plans = () => {
         return;
       }
 
-      const priceId = import.meta.env.VITE_STRIPE_PRICE_ID;
-
-      if (!priceId) {
-        toast({
-          title: text({ pt: "Erro de configuração", en: "Configuration error" }),
-          description: text({ pt: "VITE_STRIPE_PRICE_ID não definido.", en: "VITE_STRIPE_PRICE_ID is not defined." }),
-          variant: "destructive",
-        });
-        return;
-      }
-
       if (isNativeApp) {
         toast({
           title: text({ pt: "Assinatura no app em preparação", en: "In-app subscription in progress" }),
@@ -68,7 +57,6 @@ const Plans = () => {
           Authorization: `Bearer ${session.access_token}`,
         },
         body: {
-          priceId,
           email: user.email,
           userId: user.id,
           trialDays: 30,
