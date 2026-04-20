@@ -71,6 +71,12 @@ const parseTime = (value: string) => {
   return { hour, minute };
 };
 
+const isMissingSendPushColumnError = (error: { code?: string; message?: string } | null | undefined) => {
+  if (!error) return false;
+  const message = (error.message ?? "").toLowerCase();
+  return error.code === "42703" && message.includes("send_push");
+};
+
 const toWeekday = (day: number) => day + 1;
 
 const hashString = (input: string) => {
@@ -228,14 +234,30 @@ const Reminders = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from("reminders")
-      .select(`
+    const selectWithSendPush = `
         id, title, description, reminder_type, days_of_week, is_active, send_email, send_push, email, timezone, created_at, updated_at, user_id,
         reminder_times (id, scheduled_time, is_active, created_at)
-      `)
+      `;
+    const selectWithoutSendPush = `
+        id, title, description, reminder_type, days_of_week, is_active, send_email, email, timezone, created_at, updated_at, user_id,
+        reminder_times (id, scheduled_time, is_active, created_at)
+      `;
+
+    let queryResult = await supabase
+      .from("reminders")
+      .select(selectWithSendPush)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+
+    if (isMissingSendPushColumnError(queryResult.error)) {
+      queryResult = await supabase
+        .from("reminders")
+        .select(selectWithoutSendPush)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+    }
+
+    const { data, error } = queryResult;
 
     if (error) {
       toast({
@@ -244,8 +266,9 @@ const Reminders = () => {
         variant: "destructive",
       });
     } else {
-      const normalized = (data ?? []).map((reminder) => ({
+      const normalized = (data ?? []).map((reminder: any) => ({
         ...reminder,
+        send_push: reminder.send_push ?? true,
         days_of_week: normalizeDays(reminder.days_of_week),
         reminder_times: reminder.reminder_times ?? [],
       })) as Reminder[];
@@ -431,21 +454,35 @@ const Reminders = () => {
       console.warn("Erro ao salvar timezone do usuário:", timezoneError);
     }
 
-    const { data: reminder, error: reminderError } = await supabase
+    const reminderPayload = {
+      user_id: user.id,
+      title: formData.title,
+      description: formData.description,
+      reminder_type: formData.reminder_type as "medication" | "water" | "exercise" | "custom",
+      days_of_week: formData.days_of_week.map(d => Number(d)),
+      send_email: formData.send_email,
+      email: formData.send_email ? user.email : null,
+      timezone: BRAZIL_TIMEZONE,
+    };
+
+    let reminderResult = await supabase
       .from("reminders")
       .insert({
-        user_id: user.id,
-        title: formData.title,
-        description: formData.description,
-        reminder_type: formData.reminder_type as "medication" | "water" | "exercise" | "custom",
-        days_of_week: formData.days_of_week.map(d => Number(d)),
-        send_email: formData.send_email,
+        ...reminderPayload,
         send_push: formData.send_push,
-        email: formData.send_email ? user.email : null,
-        timezone: BRAZIL_TIMEZONE,
       })
       .select("id")
       .single();
+
+    if (isMissingSendPushColumnError(reminderResult.error)) {
+      reminderResult = await supabase
+        .from("reminders")
+        .insert(reminderPayload)
+        .select("id")
+        .single();
+    }
+
+    const { data: reminder, error: reminderError } = reminderResult;
 
     if (reminderError || !reminder) {
       toast({

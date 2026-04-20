@@ -29,6 +29,12 @@ interface EditReminderDialogProps {
   onUpdate: () => void;
 }
 
+const isMissingSendPushColumnError = (error: { code?: string; message?: string } | null | undefined) => {
+  if (!error) return false;
+  const message = (error.message ?? "").toLowerCase();
+  return error.code === "42703" && message.includes("send_push");
+};
+
 const DAYS = [
   { value: 0, label: "Dom" },
   { value: 1, label: "Seg" },
@@ -137,16 +143,29 @@ export const EditReminderDialog = ({ reminder, open, onOpenChange, onUpdate }: E
       .map((day) => Number(day))
       .filter((value) => Number.isFinite(value));
 
-    const { error } = await supabase
+    const reminderUpdate = {
+      title: formData.title,
+      description: formData.description,
+      reminder_type: formData.reminder_type,
+      days_of_week: days,
+    };
+
+    let updateResult = await supabase
       .from("reminders")
       .update({
-        title: formData.title,
-        description: formData.description,
-        reminder_type: formData.reminder_type,
-        days_of_week: days,
+        ...reminderUpdate,
         send_push: formData.send_push,
       })
       .eq("id", reminder.id);
+
+    if (isMissingSendPushColumnError(updateResult.error)) {
+      updateResult = await supabase
+        .from("reminders")
+        .update(reminderUpdate)
+        .eq("id", reminder.id);
+    }
+
+    const { error } = updateResult;
 
     if (error) {
       toast({
