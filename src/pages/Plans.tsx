@@ -9,6 +9,8 @@ import logoAcalmeme from "@/assets/logo-acalmeme.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLanguage } from "@/i18n/language";
 import { Capacitor } from "@capacitor/core";
+import { useNativeBilling } from "@/hooks/useNativeBilling";
+import { getActiveRevenueCatEntitlement } from "@/lib/revenuecat";
 
 const Plans = () => {
   const navigate = useNavigate();
@@ -16,17 +18,88 @@ const Plans = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { text, isEnglish } = useLanguage();
   const isNativeApp = Capacitor.isNativePlatform();
+  const {
+    currentPackage,
+    isLoading: isNativeBillingLoading,
+    isPurchasing,
+    isRestoring,
+    isReady: isNativeBillingReady,
+    error: nativeBillingError,
+    purchaseCurrentPackage,
+    restorePurchases,
+  } = useNativeBilling();
+
+  const nativePriceLabel = currentPackage?.product.priceString ?? "R$ 9,90";
+  const nativePeriodLabel = (() => {
+    switch (currentPackage?.packageType) {
+      case "ANNUAL":
+        return isEnglish ? "/year" : "/ano";
+      case "SIX_MONTH":
+        return isEnglish ? "/6 months" : "/6 meses";
+      case "THREE_MONTH":
+        return isEnglish ? "/3 months" : "/3 meses";
+      case "TWO_MONTH":
+        return isEnglish ? "/2 months" : "/2 meses";
+      case "WEEKLY":
+        return isEnglish ? "/week" : "/semana";
+      default:
+        return isEnglish ? "/month" : "/mês";
+    }
+  })();
 
   const handleSubscribe = async () => {
     try {
       if (isSubmitting) return;
-      setIsSubmitting(true);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
         return;
       }
+
+      if (isNativeApp) {
+        if (!isNativeBillingReady || !currentPackage) {
+          toast({
+            title: text({ pt: "Cobrança móvel indisponível", en: "Mobile billing unavailable" }),
+            description:
+              nativeBillingError ||
+              text({
+                pt: "Configure uma offering ativa no RevenueCat para liberar a assinatura no app.",
+                en: "Configure an active RevenueCat offering to enable in-app subscriptions.",
+              }),
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const result = await purchaseCurrentPackage();
+        const entitlement = getActiveRevenueCatEntitlement(result.customerInfo);
+
+        if (!entitlement?.isActive) {
+          toast({
+            title: text({ pt: "Assinatura pendente", en: "Subscription pending" }),
+            description: text({
+              pt: "A compra foi concluída, mas o acesso ainda não foi liberado. Tente restaurar as compras em instantes.",
+              en: "The purchase completed, but access is not active yet. Try restoring purchases in a moment.",
+            }),
+            variant: "destructive",
+          });
+          return;
+        }
+
+        toast({
+          title: text({ pt: "Assinatura ativada", en: "Subscription activated" }),
+          description: text({
+            pt: "Seu acesso Premium foi liberado via App Store / Google Play.",
+            en: "Your Premium access has been unlocked via App Store / Google Play.",
+          }),
+        });
+        navigate("/dashboard");
+        return;
+      }
+
+      setIsSubmitting(true);
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         toast({
@@ -38,17 +111,6 @@ const Plans = () => {
           variant: "destructive",
         });
         navigate("/auth");
-        return;
-      }
-
-      if (isNativeApp) {
-        toast({
-          title: text({ pt: "Assinatura no app em preparação", en: "In-app subscription in progress" }),
-          description: text({
-            pt: "A cobrança no app móvel será feita via App Store / Google Play.",
-            en: "Mobile billing will be handled via App Store / Google Play.",
-          }),
-        });
         return;
       }
 
@@ -101,16 +163,62 @@ const Plans = () => {
       });
     } catch (error) {
       console.error("Checkout exception:", error);
+
+      if (isNativeApp && typeof error === "object" && error && "userCancelled" in error && error.userCancelled) {
+        return;
+      }
+
       toast({
         title: text({ pt: "Erro", en: "Error" }),
         description: text({
-          pt: "Não foi possível iniciar o processo de pagamento. Tente novamente.",
-          en: "Could not start the payment process. Please try again.",
+          pt: isNativeApp
+            ? "Não foi possível concluir a compra no app. Tente novamente."
+            : "Não foi possível iniciar o processo de pagamento. Tente novamente.",
+          en: isNativeApp
+            ? "Could not complete the in-app purchase. Please try again."
+            : "Could not start the payment process. Please try again.",
         }),
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      const result = await restorePurchases();
+      const entitlement = getActiveRevenueCatEntitlement(result.customerInfo);
+
+      if (entitlement?.isActive) {
+        toast({
+          title: text({ pt: "Compras restauradas", en: "Purchases restored" }),
+          description: text({
+            pt: "Seu acesso Premium foi restaurado com sucesso.",
+            en: "Your Premium access has been restored successfully.",
+          }),
+        });
+        navigate("/dashboard");
+        return;
+      }
+
+      toast({
+        title: text({ pt: "Nenhuma assinatura encontrada", en: "No subscription found" }),
+        description: text({
+          pt: "Não encontramos uma assinatura ativa para esta conta da loja.",
+          en: "We couldn't find an active subscription for this store account.",
+        }),
+      });
+    } catch (error) {
+      console.error("Restore purchases exception:", error);
+      toast({
+        title: text({ pt: "Erro", en: "Error" }),
+        description: text({
+          pt: "Não foi possível restaurar as compras agora.",
+          en: "Could not restore purchases right now.",
+        }),
+        variant: "destructive",
+      });
     }
   };
 
@@ -194,13 +302,17 @@ const Plans = () => {
               </CardTitle>
               <CardDescription>{text({ pt: "Acesso completo a tudo", en: "Full access to everything" })}</CardDescription>
               <div className="mt-4">
-                <span className="text-4xl font-bold">R$ 9,90</span>
-                <span className="text-muted-foreground">{isEnglish ? "/month" : "/mês"}</span>
+                <span className="text-4xl font-bold">{isNativeApp ? nativePriceLabel : "R$ 9,90"}</span>
+                <span className="text-muted-foreground">{isNativeApp ? nativePeriodLabel : isEnglish ? "/month" : "/mês"}</span>
               </div>
               <p className="text-sm text-primary font-medium mt-2">
                 {text({
-                  pt: "30 dias grátis após confirmar o cartão",
-                  en: "30 free days after card confirmation",
+                  pt: isNativeApp
+                    ? "Assinatura processada pela loja com segurança"
+                    : "30 dias grátis após confirmar o cartão",
+                  en: isNativeApp
+                    ? "Subscription processed securely by the store"
+                    : "30 free days after card confirmation",
                 })}
               </p>
             </CardHeader>
@@ -238,20 +350,44 @@ const Plans = () => {
               <Button 
                 className="w-full bg-gradient-hero text-white hover:opacity-90 text-base py-6"
                 onClick={handleSubscribe}
-                disabled={isSubmitting || isNativeApp}
+                disabled={
+                  isSubmitting ||
+                  isPurchasing ||
+                  isRestoring ||
+                  (isNativeApp && (!isNativeBillingReady || !currentPackage))
+                }
               >
                 <CreditCard className="w-5 h-5 mr-2" />
                 {isNativeApp
-                  ? text({ pt: "Disponível via loja em breve", en: "Store billing coming soon" })
+                  ? isNativeBillingLoading
+                    ? text({ pt: "Carregando loja...", en: "Loading store..." })
+                    : isPurchasing
+                      ? text({ pt: "Processando compra...", en: "Processing purchase..." })
+                      : !isNativeBillingReady || !currentPackage
+                        ? text({ pt: "Assinatura indisponível", en: "Subscription unavailable" })
+                        : text({ pt: "Assinar no app", en: "Subscribe in app" })
                   : isSubmitting
                     ? text({ pt: "Carregando...", en: "Loading..." })
                     : text({ pt: "Assinar Agora", en: "Subscribe Now" })}
               </Button>
+              {isNativeApp && (
+                <Button
+                  variant="outline"
+                  className="w-full mt-3"
+                  onClick={handleRestorePurchases}
+                  disabled={!isNativeBillingReady || isRestoring || isPurchasing}
+                >
+                  {isRestoring
+                    ? text({ pt: "Restaurando...", en: "Restoring..." })
+                    : text({ pt: "Restaurar compras", en: "Restore purchases" })}
+                </Button>
+              )}
               <p className="text-xs text-muted-foreground text-center mt-4">
                 {isNativeApp
-                  ? text({
-                      pt: "Para publicação móvel, pagamentos serão processados pela App Store / Google Play.",
-                      en: "For mobile store release, payments will be handled by App Store / Google Play.",
+                  ? nativeBillingError ||
+                    text({
+                      pt: "Pagamentos no app são processados pela App Store / Google Play. O Stripe continua apenas na web.",
+                      en: "In-app payments are processed by the App Store / Google Play. Stripe remains web-only.",
                     })
                   : text({ pt: "Cancele a qualquer momento. Sem multas.", en: "Cancel anytime. No fees." })}
               </p>

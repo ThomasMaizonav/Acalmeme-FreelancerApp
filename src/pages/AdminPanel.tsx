@@ -28,6 +28,9 @@ interface UserWithSubscription {
     current_period_end: string;
     current_period_start: string;
     trial_end: string | null;
+    billing_provider?: string | null;
+    billing_store?: string | null;
+    billing_product_id?: string | null;
     stripe_subscription_id: string | null;
     stripe_customer_id: string | null;
   };
@@ -392,6 +395,9 @@ const AdminPanel = () => {
               cancel_at_period_end: false,
               current_period_start: now.toISOString(),
               current_period_end: next.toISOString(),
+              billing_provider: "manual",
+              billing_store: null,
+              billing_product_id: null,
               updated_at: now.toISOString(),
             },
             { onConflict: "user_id" },
@@ -410,6 +416,9 @@ const AdminPanel = () => {
                     current_period_start: now.toISOString(),
                     current_period_end: next.toISOString(),
                     trial_end: item.subscription?.trial_end || null,
+                    billing_provider: item.subscription?.billing_provider || "manual",
+                    billing_store: item.subscription?.billing_store || null,
+                    billing_product_id: item.subscription?.billing_product_id || null,
                     stripe_subscription_id: item.subscription?.stripe_subscription_id || null,
                     stripe_customer_id: item.subscription?.stripe_customer_id || null,
                   },
@@ -497,7 +506,7 @@ const AdminPanel = () => {
       return <Badge variant="default">Ativo</Badge>;
     }
     if (user.subscription?.status === 'trialing') {
-      return <Badge variant="secondary">Trial Stripe</Badge>;
+      return <Badge variant="secondary">Teste grátis</Badge>;
     }
     if (user.free_trial_started_at && !user.free_trial_used) {
       const startDate = new Date(user.free_trial_started_at);
@@ -508,6 +517,26 @@ const AdminPanel = () => {
       }
     }
     return <Badge variant="destructive">Expirado</Badge>;
+  };
+
+  const getBillingSourceLabel = (user: UserWithSubscription) => {
+    const provider = user.subscription?.billing_provider;
+    const store = user.subscription?.billing_store;
+
+    if (provider === "app_store" || store === "APP_STORE") return "App Store";
+    if (provider === "play_store" || store === "PLAY_STORE") return "Google Play";
+    if (provider === "manual") return "Manual";
+    if (provider === "stripe" || user.subscription?.stripe_customer_id) return "Stripe";
+    return "-";
+  };
+
+  const getBillingReference = (user: UserWithSubscription) => {
+    return (
+      user.subscription?.stripe_customer_id ||
+      user.subscription?.stripe_subscription_id ||
+      user.subscription?.billing_product_id ||
+      "-"
+    );
   };
 
   if (!isAdmin) {
@@ -749,7 +778,8 @@ const AdminPanel = () => {
                           <TableHead>Início do Período</TableHead>
                           <TableHead>Fim do Período</TableHead>
                           <TableHead>Valor Mensal</TableHead>
-                          <TableHead>ID Stripe</TableHead>
+                          <TableHead>Origem</TableHead>
+                          <TableHead>Referência</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -781,14 +811,17 @@ const AdminPanel = () => {
                               <TableCell className="text-sm font-semibold">
                                 {user.subscription?.status === 'active' ? 'R$ 9,90' : '-'}
                               </TableCell>
+                              <TableCell className="text-sm">
+                                {getBillingSourceLabel(user)}
+                              </TableCell>
                               <TableCell className="text-xs font-mono max-w-[150px] truncate">
-                                {user.subscription?.stripe_customer_id || '-'}
+                                {getBillingReference(user)}
                               </TableCell>
                             </TableRow>
                           ))}
                         {filteredUsers.filter(u => u.subscription).length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground">
+                            <TableCell colSpan={7} className="text-center text-muted-foreground">
                               Nenhum pagamento registrado ainda
                             </TableCell>
                           </TableRow>

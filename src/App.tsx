@@ -1,9 +1,11 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PremiumGuard } from "@/components/PremiumGuard";
 import { AuthGuard } from "@/components/AuthGuard";
+import { supabase } from "@/integrations/supabase/client";
+import { ensureRevenueCatConfigured, isNativeBillingEnabled } from "@/lib/revenuecat";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
@@ -35,6 +37,34 @@ const appAccessFeature = {
 
 const App = () => {
   const { text } = useLanguage();
+
+  useEffect(() => {
+    if (!isNativeBillingEnabled()) return;
+
+    const syncCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        await ensureRevenueCatConfigured(user);
+      }
+    };
+
+    void syncCurrentUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        void ensureRevenueCatConfigured(session.user);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

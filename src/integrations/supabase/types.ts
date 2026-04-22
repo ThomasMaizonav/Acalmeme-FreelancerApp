@@ -277,11 +277,17 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_management_url: string | null
+          billing_product_id: string | null
+          billing_provider: string
+          billing_store: string | null
           cancel_at_period_end: boolean | null
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
           id: string
+          revenuecat_app_user_id: string | null
+          revenuecat_original_app_user_id: string | null
           status: Database["public"]["Enums"]["subscription_status"]
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -290,11 +296,17 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          billing_management_url?: string | null
+          billing_product_id?: string | null
+          billing_provider?: string
+          billing_store?: string | null
           cancel_at_period_end?: boolean | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          revenuecat_app_user_id?: string | null
+          revenuecat_original_app_user_id?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -303,11 +315,17 @@ export type Database = {
           user_id: string
         }
         Update: {
+          billing_management_url?: string | null
+          billing_product_id?: string | null
+          billing_provider?: string
+          billing_store?: string | null
           cancel_at_period_end?: boolean | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           id?: string
+          revenuecat_app_user_id?: string | null
+          revenuecat_original_app_user_id?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null

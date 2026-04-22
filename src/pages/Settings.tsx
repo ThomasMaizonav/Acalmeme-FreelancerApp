@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,12 +14,16 @@ import {
   Save,
   Trash2,
   Mail,
-  Lock
+  Lock,
+  ExternalLink,
+  RefreshCcw,
+  Smartphone,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserProgress } from "@/hooks/useUserProgress";
+import { Capacitor } from "@capacitor/core";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,15 +35,25 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useNativeBilling } from "@/hooks/useNativeBilling";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { updateProgress } = useUserProgress();
+  const isNativeApp = Capacitor.isNativePlatform();
+  const {
+    isReady: isNativeBillingReady,
+    isRestoring,
+    managementUrl,
+    error: nativeBillingError,
+    restorePurchases,
+  } = useNativeBilling();
   
   // Profile state
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
   
   // Notification preferences state
@@ -50,15 +64,7 @@ const Settings = () => {
   // Privacy state
   const [dataCollection, setDataCollection] = useState(true);
 
-  useEffect(() => {
-    loadUserData();
-  }, []);
-
-  useEffect(() => {
-    updateProgress();
-  }, [updateProgress]);
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -67,6 +73,7 @@ const Settings = () => {
       }
 
       setEmail(user.email || "");
+      setUserId(user.id);
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -89,6 +96,53 @@ const Settings = () => {
     } finally {
       setLoading(false);
     }
+  }, [navigate, toast]);
+
+  useEffect(() => {
+    void loadUserData();
+  }, [loadUserData]);
+
+  useEffect(() => {
+    updateProgress();
+  }, [updateProgress]);
+
+  const handleRestoreStorePurchases = async () => {
+    try {
+      const result = await restorePurchases();
+      const hasActiveEntitlement = Object.keys(result.customerInfo.entitlements.active).length > 0;
+
+      if (hasActiveEntitlement) {
+        toast({
+          title: "Compras restauradas",
+          description: "Sua assinatura foi restaurada com sucesso.",
+        });
+        return;
+      }
+
+      toast({
+        title: "Nenhuma compra encontrada",
+        description: "Não localizamos uma assinatura ativa para esta conta da loja.",
+      });
+    } catch (error) {
+      console.error("Error restoring store purchases:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível restaurar suas compras agora.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenStoreManagement = () => {
+    if (!managementUrl) {
+      toast({
+        title: "Assinatura indisponível",
+        description: "Ainda não encontramos uma assinatura ativa para esta conta.",
+      });
+      return;
+    }
+
+    window.open(managementUrl, "_blank", "noopener,noreferrer");
   };
 
   const handleSaveProfile = async () => {
@@ -255,6 +309,62 @@ const Settings = () => {
                     Alterar Senha
                   </Button>
                 </div>
+
+                {isNativeApp && (
+                  <>
+                    <Separator />
+
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                          <Smartphone className="w-5 h-5 text-primary" />
+                          Assinatura do App
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Gerencie ou restaure sua assinatura feita pela App Store / Google Play.
+                        </p>
+                      </div>
+
+                      {nativeBillingError ? (
+                        <p className="text-sm text-destructive">{nativeBillingError}</p>
+                      ) : (
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <Button
+                            variant="outline"
+                            className="gap-2"
+                            onClick={handleRestoreStorePurchases}
+                            disabled={!isNativeBillingReady || isRestoring}
+                          >
+                            <RefreshCcw className="w-4 h-4" />
+                            {isRestoring ? "Restaurando..." : "Restaurar Compras"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="gap-2"
+                            onClick={handleOpenStoreManagement}
+                            disabled={!managementUrl}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Gerenciar Assinatura
+                          </Button>
+                        </div>
+                      )}
+
+                      <div>
+                        <Label htmlFor="app-user-id">ID da Conta no App</Label>
+                        <Input
+                          id="app-user-id"
+                          value={userId}
+                          disabled
+                          className="mt-1.5 font-mono text-xs"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Use este identificador ao configurar o RevenueCat e o webhook no Supabase.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="flex justify-end">
                   <Button onClick={handleSaveProfile} className="gap-2" disabled>
