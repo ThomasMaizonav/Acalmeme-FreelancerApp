@@ -77,30 +77,6 @@ export const useFreeTrialStatus = () => {
     return { profile: null, key: "user_id" as const };
   };
 
-  const upsertProfile = async (
-    userId: string,
-    key: "user_id" | "id",
-    values: Record<string, unknown>,
-  ) => {
-    const payload = { ...values, [key]: userId } as Record<string, unknown>;
-    const { error } = await supabase
-      .from("profiles")
-      .upsert(payload as any);
-
-    if (!error) return;
-
-    if (key === "user_id") {
-      const fallbackPayload = { ...values, id: userId } as Record<string, unknown>;
-      const { error: fallbackError } = await supabase
-        .from("profiles")
-        .upsert(fallbackPayload as any);
-      if (fallbackError) throw fallbackError;
-      return;
-    }
-
-    throw error;
-  };
-
   const updateProfile = async (
     userId: string,
     key: "user_id" | "id",
@@ -195,46 +171,34 @@ export const useFreeTrialStatus = () => {
       }
 
       const { profile, key } = await fetchProfile(user.id);
+      const trialStartIso = profile?.free_trial_started_at || user.created_at || null;
 
-      if (!profile || (!profile.free_trial_used && !profile.free_trial_started_at)) {
-        const startedAt = new Date().toISOString();
-
-        if (!profile) {
-          await upsertProfile(user.id, key, {
-            free_trial_started_at: startedAt,
-            free_trial_used: false,
-          });
-        } else {
-          await updateProfile(user.id, key, {
-            free_trial_started_at: startedAt,
-          });
-        }
-
-        setIsInFreeTrial(true);
-        setFreeTrialDaysLeft(30);
+      if (!trialStartIso) {
+        setIsInFreeTrial(false);
+        setFreeTrialDaysLeft(0);
         return;
       }
 
-      if (profile && !profile.free_trial_used && profile.free_trial_started_at) {
-        const startDate = toSaoPauloDate(new Date(profile.free_trial_started_at));
-        const todayDate = toSaoPauloDate(new Date());
-        const diffMs = todayDate.getTime() - startDate.getTime();
-        const daysPassed = diffMs > 0 ? Math.floor(diffMs / (1000 * 60 * 60 * 24)) : 0;
-        const daysLeft = Math.max(0, 30 - daysPassed);
+      if (profile && !profile.free_trial_started_at) {
+        await updateProfile(user.id, key, { free_trial_started_at: trialStartIso });
+      }
 
-        if (daysLeft > 0) {
-          setIsInFreeTrial(true);
-          setFreeTrialDaysLeft(daysLeft);
-        } else {
-          setIsInFreeTrial(false);
-          setFreeTrialDaysLeft(0);
+      const startDate = toSaoPauloDate(new Date(trialStartIso));
+      const todayDate = toSaoPauloDate(new Date());
+      const diffMs = todayDate.getTime() - startDate.getTime();
+      const daysPassed = diffMs > 0 ? Math.floor(diffMs / (1000 * 60 * 60 * 24)) : 0;
+      const daysLeft = Math.max(0, 30 - daysPassed);
 
-          // Mark free trial as used
-          await updateProfile(user.id, key, { free_trial_used: true });
-        }
+      if (daysLeft > 0) {
+        setIsInFreeTrial(true);
+        setFreeTrialDaysLeft(daysLeft);
       } else {
         setIsInFreeTrial(false);
         setFreeTrialDaysLeft(0);
+
+        if (profile && !profile.free_trial_used) {
+          await updateProfile(user.id, key, { free_trial_used: true });
+        }
       }
     } catch (error) {
       console.error("Error checking free trial status:", error);

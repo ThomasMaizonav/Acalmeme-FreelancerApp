@@ -1,5 +1,6 @@
 // supabase/functions/create-checkout-session/index.ts
 import Stripe from "npm:stripe@14.25.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,13 +43,19 @@ Deno.serve(async (req) => {
 
     const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY") || "";
     const DEFAULT_PRICE_ID = Deno.env.get("STRIPE_PRICE_ID") || "";
-    const DEFAULT_TRIAL_DAYS = Number.parseInt(
-      Deno.env.get("STRIPE_TRIAL_DAYS") || "30",
-      10,
-    );
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const ACCOUNT_TRIAL_DAYS = 30;
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
     if (!STRIPE_SECRET_KEY) {
       return json({ error: "Missing STRIPE_SECRET_KEY secret" }, 500);
+    }
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return json(
+        { error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY secret" },
+        500,
+      );
     }
 
     const authHeader =
@@ -78,13 +85,7 @@ Deno.serve(async (req) => {
     const priceId: string = DEFAULT_PRICE_ID || requestedPriceId;
     const userId = authenticatedUserId;
     const email: string = body.email || authenticatedEmail;
-    const trialDaysInput = Number.parseInt(
-      String(body.trialDays ?? DEFAULT_TRIAL_DAYS),
-      10,
-    );
-    const trialDays = Number.isFinite(trialDaysInput)
-      ? Math.min(Math.max(trialDaysInput, 0), 730)
-      : 30;
+    const now = Date.now();
 
     const origin: string =
       body.origin || req.headers.get("origin") || "https://acalmeme.vercel.app";
@@ -104,6 +105,44 @@ Deno.serve(async (req) => {
     const stripe = new Stripe(STRIPE_SECRET_KEY, {
       apiVersion: "2024-06-20",
     });
+
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("free_trial_started_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (profileError) {
+      return json({ error: "Failed to read user profile", message: profileError.message }, 500);
+    }
+
+    let trialStartIso =
+      typeof profileData?.free_trial_started_at === "string"
+        ? profileData.free_trial_started_at
+        : null;
+
+    if (!trialStartIso) {
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(
+        userId,
+      );
+      if (userError) {
+        return json({ error: "Failed to read auth user", message: userError.message }, 500);
+      }
+      trialStartIso = userData.user?.created_at || null;
+    }
+
+    const trialStartMs = trialStartIso ? Date.parse(trialStartIso) : Number.NaN;
+    const trialEndMs = Number.isFinite(trialStartMs)
+      ? trialStartMs + ACCOUNT_TRIAL_DAYS * MS_PER_DAY
+      : now;
+    const remainingTrialMs = trialEndMs - now;
+    const trialDays =
+      remainingTrialMs > 0
+        ? Math.min(ACCOUNT_TRIAL_DAYS, Math.ceil(remainingTrialMs / MS_PER_DAY))
+        : 0;
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",

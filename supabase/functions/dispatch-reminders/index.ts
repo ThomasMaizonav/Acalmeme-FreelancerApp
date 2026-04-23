@@ -1,6 +1,17 @@
 // supabase/functions/dispatch-reminders/index.ts
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 const TZ = "America/Sao_Paulo";
+const ACCOUNT_TRIAL_DAYS = 30;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+type ProfileRow = {
+  id: string;
+  user_id: string | null;
+  free_trial_started_at: string | null;
+  created_at: string | null;
+  trial_expired_email_sent: boolean | null;
+  trial_expired_email_sent_at: string | null;
+};
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -111,6 +122,14 @@ async function supabaseFetch(
   });
 }
 
+const hasValidFreeTrial = (profile: ProfileRow | undefined, nowMs: number) => {
+  const trialStartIso = profile?.free_trial_started_at || profile?.created_at || null;
+  if (!trialStartIso) return false;
+  const trialStartMs = Date.parse(trialStartIso);
+  if (!Number.isFinite(trialStartMs)) return false;
+  return trialStartMs + ACCOUNT_TRIAL_DAYS * MS_PER_DAY > nowMs;
+};
+
 serve(async (req) => {
   try {
     const auth = req.headers.get("authorization") || "";
@@ -156,6 +175,91 @@ serve(async (req) => {
     }
 
     const reminders = await remindersRes.json();
+    const uniqueUserIds = [
+      ...new Set(
+        (Array.isArray(reminders) ? reminders : [])
+          .map((r: any) => (typeof r?.user_id === "string" ? r.user_id : ""))
+          .filter(Boolean),
+      ),
+    ];
+
+    const usersIn = uniqueUserIds.join(",");
+    const nowMs = Date.now();
+
+    const profileByUserId = new Map<string, ProfileRow>();
+    const hasActiveSubscription = new Set<string>();
+    const adminUsers = new Set<string>();
+    const accessByUserId = new Map<
+      string,
+      {
+        hasAccess: boolean;
+        trialExpiredEmailSent: boolean;
+      }
+    >();
+
+    if (uniqueUserIds.length > 0) {
+      const profilesRes = await supabaseFetch(
+        supabaseUrl,
+        serviceRoleKey,
+        `profiles?select=id,user_id,free_trial_started_at,created_at,trial_expired_email_sent,trial_expired_email_sent_at&id=in.(${usersIn})`,
+      );
+      if (!profilesRes.ok) {
+        const t = await profilesRes.text();
+        return json({ error: "failed_to_fetch_profiles", details: t }, 500);
+      }
+
+      const profiles = (await profilesRes.json()) as ProfileRow[];
+      for (const p of profiles) {
+        const key = p.user_id || p.id;
+        if (key) profileByUserId.set(key, p);
+      }
+
+      const subscriptionsRes = await supabaseFetch(
+        supabaseUrl,
+        serviceRoleKey,
+        `subscriptions?select=user_id,status&user_id=in.(${usersIn})&status=in.(active,trialing)`,
+      );
+      if (!subscriptionsRes.ok) {
+        const t = await subscriptionsRes.text();
+        return json({ error: "failed_to_fetch_subscriptions", details: t }, 500);
+      }
+
+      const subscriptions = (await subscriptionsRes.json()) as Array<{
+        user_id: string | null;
+        status: string;
+      }>;
+      for (const s of subscriptions) {
+        if (s.user_id) hasActiveSubscription.add(s.user_id);
+      }
+
+      const adminsRes = await supabaseFetch(
+        supabaseUrl,
+        serviceRoleKey,
+        `user_roles?select=user_id,role&user_id=in.(${usersIn})&role=eq.admin`,
+      );
+      if (!adminsRes.ok) {
+        const t = await adminsRes.text();
+        return json({ error: "failed_to_fetch_admin_roles", details: t }, 500);
+      }
+
+      const admins = (await adminsRes.json()) as Array<{ user_id: string | null; role: string }>;
+      for (const a of admins) {
+        if (a.user_id) adminUsers.add(a.user_id);
+      }
+
+      for (const userId of uniqueUserIds) {
+        const profile = profileByUserId.get(userId);
+        const hasAccess =
+          adminUsers.has(userId) ||
+          hasActiveSubscription.has(userId) ||
+          hasValidFreeTrial(profile, nowMs);
+
+        accessByUserId.set(userId, {
+          hasAccess,
+          trialExpiredEmailSent: Boolean(profile?.trial_expired_email_sent),
+        });
+      }
+    }
 
     let checked = 0;
     let queued = 0;
@@ -163,6 +267,9 @@ serve(async (req) => {
     let skippedNoEmail = 0;
     let skippedDay = 0;
     let skippedTime = 0;
+    let skippedNoAccess = 0;
+    let trialExpiredNoticesSent = 0;
+    const trialNoticeAttempted = new Set<string>();
     const matches: Array<{ reminder_id: string; reminder_time_id: string; scheduled_time: string }> = [];
 
     for (const r of reminders) {
@@ -171,6 +278,51 @@ serve(async (req) => {
       if (!r.email) {
         skipped++;
         skippedNoEmail++;
+        continue;
+      }
+      const userId = typeof r.user_id === "string" ? r.user_id : "";
+      const userAccess = userId ? accessByUserId.get(userId) : undefined;
+      if (userAccess && !userAccess.hasAccess) {
+        if (!userAccess.trialExpiredEmailSent && !trialNoticeAttempted.has(userId) && r.email) {
+          trialNoticeAttempted.add(userId);
+
+          const trialEndedSendRes = await fetch(sendEmailUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${cronSecret}`,
+            },
+            body: JSON.stringify({
+              to: r.email,
+              subject: "Seu período de teste terminou",
+              text:
+                "Seu teste grátis de 30 dias terminou e os lembretes por e-mail foram pausados. Assine o Premium para voltar a receber os lembretes por e-mail.",
+            }),
+          });
+
+          if (trialEndedSendRes.ok) {
+            const markSentRes = await supabaseFetch(
+              supabaseUrl,
+              serviceRoleKey,
+              `profiles?id=eq.${userId}`,
+              {
+                method: "PATCH",
+                body: JSON.stringify({
+                  trial_expired_email_sent: true,
+                  trial_expired_email_sent_at: new Date().toISOString(),
+                }),
+              },
+            );
+
+            if (markSentRes.ok) {
+              userAccess.trialExpiredEmailSent = true;
+              trialExpiredNoticesSent++;
+            }
+          }
+        }
+
+        skipped++;
+        skippedNoAccess++;
         continue;
       }
       const allowed = Array.isArray(r.days_of_week) ? r.days_of_week : [];
@@ -195,6 +347,7 @@ serve(async (req) => {
           skippedTime++;
           continue;
         }
+
         if (debug) {
           matches.push({
             reminder_id: r.id,
@@ -288,6 +441,8 @@ serve(async (req) => {
       checked,
       queued,
       skipped,
+      skipped_no_access: skippedNoAccess,
+      trial_expired_notices_sent: trialExpiredNoticesSent,
       ...(debug
         ? {
             skipped_no_email: skippedNoEmail,

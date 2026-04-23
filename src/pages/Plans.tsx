@@ -121,7 +121,6 @@ const Plans = () => {
         body: {
           email: user.email,
           userId: user.id,
-          trialDays: 30,
           origin: window.location.origin,
           successUrl: `${window.location.origin}/payment-success`,
           cancelUrl: `${window.location.origin}/plans`,
