@@ -504,7 +504,7 @@ const Settings = () => {
                       rel="noopener noreferrer"
                       className="hover:underline"
                     >
-                      WhatsApp: +55 11 95681-6450
+                      WhatsApp: 
                     </a>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
