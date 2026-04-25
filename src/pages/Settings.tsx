@@ -63,6 +63,7 @@ const Settings = () => {
   
   // Privacy state
   const [dataCollection, setDataCollection] = useState(true);
+  const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
 
   const loadUserData = useCallback(async () => {
     try {
@@ -181,6 +182,44 @@ const Settings = () => {
         description: "Não foi possível atualizar o perfil",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSendPasswordReset = async () => {
+    if (!email) {
+      toast({
+        title: "E-mail não encontrado",
+        description: "Não foi possível identificar o e-mail da sua conta.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSendingPasswordReset(true);
+      const envResetRedirect = import.meta.env.VITE_SUPABASE_PASSWORD_RESET_REDIRECT_URL;
+      const defaultResetRedirect = `${window.location.origin}/auth?type=recovery`;
+      const redirectTo = envResetRedirect || defaultResetRedirect;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Lembrete enviado",
+        description: "Verifique seu e-mail para redefinir sua senha.",
+      });
+    } catch (error: any) {
+      console.error("Error sending password reset email:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível enviar o lembrete de troca de senha.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingPasswordReset(false);
     }
   };
 
@@ -304,9 +343,14 @@ const Settings = () => {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Segurança</h3>
-                  <Button variant="outline" className="gap-2">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={handleSendPasswordReset}
+                    disabled={isSendingPasswordReset || !email}
+                  >
                     <Lock className="w-4 h-4" />
-                    Alterar Senha
+                    {isSendingPasswordReset ? "Enviando..." : "Alterar Senha"}
                   </Button>
                 </div>
 
